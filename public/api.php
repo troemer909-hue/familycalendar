@@ -71,6 +71,7 @@ $router->get('/api/events/{id}', [$events, 'show'], [$authMiddleware]);
 $router->post('/api/events', [$events, 'create'], [$authMiddleware]);
 $router->put('/api/events/{id}', [$events, 'update'], [$authMiddleware]);
 $router->delete('/api/events/{id}', [$events, 'delete'], [$authMiddleware]);
+$router->delete('/api/events/{id}/series', [$events, 'deleteSeries'], [$authMiddleware]);
 
 // -- Erinnerungen (geschützt, persönlich je Login-Nutzer) ---------------
 $reminders = new ReminderController();

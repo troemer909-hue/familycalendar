@@ -97,6 +97,11 @@ CREATE TABLE IF NOT EXISTS events (
   all_day TINYINT(1) NOT NULL DEFAULT 0,
   scope ENUM('personal','family') NOT NULL DEFAULT 'personal',
   recurrence_rule VARCHAR(255) NULL,
+  -- Gesetzt NUR bei materialisierten Instanzen einer Wiederholungsserie
+  -- (siehe EventController::create() / RRule) - verweist auf den
+  -- Master-Termin, der selbst recurrence_rule trägt und recurrence_parent_id
+  -- NULL hat. Löschen des Masters löscht alle Instanzen per CASCADE mit.
+  recurrence_parent_id INT NULL,
   category VARCHAR(100) NULL,
   source ENUM('manual','import','stream') NOT NULL DEFAULT 'manual',
   external_uid VARCHAR(255) NULL,
@@ -106,7 +111,9 @@ CREATE TABLE IF NOT EXISTS events (
   FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE CASCADE,
   FOREIGN KEY (created_by) REFERENCES family_members(id) ON DELETE SET NULL,
   FOREIGN KEY (calendar_source_id) REFERENCES calendar_sources(id) ON DELETE SET NULL,
+  FOREIGN KEY (recurrence_parent_id) REFERENCES events(id) ON DELETE CASCADE,
   INDEX idx_family_range (family_id, starts_at, ends_at),
+  INDEX idx_recurrence_parent (recurrence_parent_id),
   -- Upsert-Ziel für ICS/CSV-Import & laufende Abos (siehe CalendarSourceController):
   -- derselbe externe Termin wird bei erneutem Sync aktualisiert statt dupliziert.
   UNIQUE KEY uniq_source_uid (calendar_source_id, external_uid)

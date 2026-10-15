@@ -61,6 +61,13 @@ $descriptionValue = $event['description'] ?? '';
 $allDayChecked = !empty($event['all_day']);
 $scopeValue = $event['scope'] ?? 'personal';
 $selectedParticipants = $event['participant_ids'] ?? [];
+
+// Serien-Status nur relevant bei bestehenden Terminen: der Master trägt
+// die recurrence_rule, eine Instanz verweist per recurrence_parent_id
+// darauf. Wiederholungen lassen sich aktuell nur beim NEU-Anlegen
+// festlegen, nicht nachträglich ändern (siehe README).
+$isSeriesMaster = $event && !empty($event['recurrence_rule']) && empty($event['recurrence_parent_id']);
+$isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -98,6 +105,31 @@ $selectedParticipants = $event['participant_ids'] ?? [];
         <input type="checkbox" name="all_day" value="1" <?= $allDayChecked ? 'checked' : '' ?> /> Ganztägig
       </label>
 
+      <?php if (!$event): ?>
+        <label>Wiederholung</label>
+        <select name="repeat_freq">
+          <option value="none">Keine Wiederholung</option>
+          <option value="daily">Täglich</option>
+          <option value="weekly">Wöchentlich</option>
+          <option value="monthly">Monatlich</option>
+          <option value="yearly">Jährlich</option>
+        </select>
+        <div class="row" style="margin-top:6px;align-items:center;">
+          <label class="checkbox-label"><input type="radio" name="repeat_end_type" value="count" checked /> Anzahl Wiederholungen</label>
+          <input type="number" name="repeat_count" value="12" min="1" max="366" />
+        </div>
+        <div class="row" style="align-items:center;">
+          <label class="checkbox-label"><input type="radio" name="repeat_end_type" value="until" /> Enddatum</label>
+          <input type="date" name="repeat_until" />
+        </div>
+        <p class="hint-text">Wird nur beim Anlegen berücksichtigt - eine bestehende Serie lässt sich aktuell nicht nachträglich in der Häufigkeit ändern.</p>
+      <?php elseif ($isSeriesMaster || $isSeriesInstance): ?>
+        <p class="hint-text">
+          <?= $isSeriesMaster ? 'Dies ist der erste Termin einer Wiederholungsserie.' : 'Dies ist ein Termin aus einer Wiederholungsserie.' ?>
+          Änderungen hier betreffen nur diesen einzelnen Termin.
+        </p>
+      <?php endif; ?>
+
       <label>Wer ist betroffen? *</label>
       <div class="row">
         <label class="checkbox-label"><input type="radio" name="scope" value="family" <?= $scopeValue === 'family' ? 'checked' : '' ?> /> Ganze Familie</label>
@@ -132,11 +164,22 @@ $selectedParticipants = $event['participant_ids'] ?? [];
     </form>
 
     <?php if ($event): ?>
-      <form method="post" action="event_delete.php" style="margin-top:12px;">
-        <input type="hidden" name="id" value="<?= (int) $eventId ?>" />
-        <input type="hidden" name="back_month" value="<?= h($backMonth) ?>" />
-        <button type="submit" class="btn btn-danger">Termin löschen</button>
-      </form>
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <form method="post" action="event_delete.php" style="margin:0;">
+          <input type="hidden" name="id" value="<?= (int) $eventId ?>" />
+          <input type="hidden" name="back_month" value="<?= h($backMonth) ?>" />
+          <button type="submit" class="btn <?= $isSeriesMaster ? 'btn-secondary' : 'btn-danger' ?>">
+            <?= $isSeriesMaster ? 'Nur diesen Termin löschen' : 'Termin löschen' ?>
+          </button>
+        </form>
+        <?php if ($isSeriesMaster): ?>
+          <form method="post" action="event_delete_series.php" style="margin:0;">
+            <input type="hidden" name="id" value="<?= (int) $eventId ?>" />
+            <input type="hidden" name="back_month" value="<?= h($backMonth) ?>" />
+            <button type="submit" class="btn btn-danger">Ganze Serie löschen</button>
+          </form>
+        <?php endif; ?>
+      </div>
 
       <h2 style="font-size:16px;margin-top:28px;">Meine Erinnerungen</h2>
       <p class="hint-text">Nur für dich persönlich - per E-Mail, unabhängig davon, wer den Termin angelegt hat.</p>
