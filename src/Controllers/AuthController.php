@@ -224,6 +224,91 @@ final class AuthController
     }
 
     /**
+     * POST /api/auth/invite/accept
+     * Body: { token, password }
+     * Gegenstück zu MemberController::invite(): die eingeladene Person legt
+     * damit ihr eigenes Login für ein bereits bestehendes Profil an - wie
+     * bei confirmPasswordReset() wird der Token nur als Hash gespeichert
+     * und geprüft. Loggt die Person direkt ein (wie register()), damit sie
+     * nach der Einladung nicht noch extra ihre E-Mail/ihr Passwort erneut
+     * eintippen muss.
+     */
+    public function acceptInvite(Request $request): void
+    {
+        $token = trim((string) $request->input('token', ''));
+        $password = (string) $request->input('password', '');
+
+        if ($token === '' || strlen($password) < 8) {
+            Response::error('Code und ein Passwort (min. 8 Zeichen) sind erforderlich.', 422);
+        }
+
+        $db = Database::connection();
+        $stmt = $db->prepare(
+            'SELECT id, family_member_id, email FROM member_invites
+             WHERE token_hash = :hash AND used_at IS NULL AND expires_at > NOW()'
+        );
+        $stmt->execute(['hash' => hash('sha256', $token)]);
+        $invite = $stmt->fetch();
+
+        if (!$invite) {
+            Response::error('Diese Einladung ist ungültig oder abgelaufen. Bitte neu anfordern.', 422);
+        }
+
+        $memberId = (int) $invite['family_member_id'];
+
+        // Zwischen Versand und Einlösung der Einladung könnte die Person
+        // bereits anderweitig ein Login bekommen haben (Admin, Race
+        // Condition) - sicherheitshalber erneut prüfen, nicht nur beim
+        // Versand.
+        $memberCheck = $db->prepare('SELECT member_type FROM family_members WHERE id = :id');
+        $memberCheck->execute(['id' => $memberId]);
+        $member = $memberCheck->fetch();
+        if (!$member || $member['member_type'] === 'login') {
+            Response::error('Diese Einladung ist nicht mehr gültig.', 409);
+        }
+
+        $emailCheck = $db->prepare('SELECT id FROM users WHERE email = :email');
+        $emailCheck->execute(['email' => $invite['email']]);
+        if ($emailCheck->fetch()) {
+            Response::error('Diese E-Mail-Adresse wird bereits verwendet.', 409);
+        }
+
+        $db->beginTransaction();
+        try {
+            $db->prepare('INSERT INTO users (email, password_hash) VALUES (:email, :hash)')
+                ->execute([
+                    'email' => $invite['email'],
+                    'hash' => password_hash($password, PASSWORD_BCRYPT),
+                ]);
+            $userId = (int) $db->lastInsertId();
+
+            $db->prepare('UPDATE family_members SET user_id = :user_id, member_type = "login" WHERE id = :id')
+                ->execute(['user_id' => $userId, 'id' => $memberId]);
+
+            $db->prepare('INSERT INTO notification_preferences (user_id) VALUES (:user_id)')
+                ->execute(['user_id' => $userId]);
+
+            // ALLE offenen Einladungen dieser Person invalidieren, nicht nur
+            // die benutzte - analog zu confirmPasswordReset().
+            $db->prepare('UPDATE member_invites SET used_at = NOW() WHERE family_member_id = :id AND used_at IS NULL')
+                ->execute(['id' => $memberId]);
+
+            $db->commit();
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            error_log('Einladung annehmen fehlgeschlagen: ' . $e->getMessage());
+            Response::error('Einladung konnte nicht angenommen werden.', 500);
+        }
+
+        $authToken = Token::issue([
+            'user_id' => $userId,
+            'exp' => time() + 60 * 60 * 24 * 30,
+        ]);
+
+        Response::json(['status' => 'ok', 'token' => $authToken]);
+    }
+
+    /**
      * Baut den Reset-Link NUR aus der server-seitig konfigurierten
      * APP_PUBLIC_URL (.env) - bewusst NICHT aus dem Host-Header des
      * Requests, der sich fälschen lässt (klassische "Password Reset

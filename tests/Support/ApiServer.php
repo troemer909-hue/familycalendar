@@ -43,8 +43,15 @@ final class ApiServer
         }
 
         $publicDir = dirname(__DIR__, 2) . '/public';
+        $fakeSendmail = __DIR__ . '/fake-sendmail.sh';
+        // Mailer::send() (PHP mail()) auf das Fake-Sendmail-Skript umbiegen,
+        // damit Integration-Tests Mail-Inhalte (Reset-/Einladungs-Codes)
+        // einsehen können, ohne einen echten MTA zu brauchen (siehe
+        // MailCapture.php). sendmail_path ist PHP_INI_SYSTEM, lässt sich
+        // also nur beim Start per -d setzen, nicht zur Laufzeit.
         $cmd = sprintf(
-            'exec php -S %s:%d -t %s %s',
+            'exec php -d sendmail_path=%s -S %s:%d -t %s %s',
+            escapeshellarg($fakeSendmail),
             self::HOST,
             self::PORT,
             escapeshellarg($publicDir),
