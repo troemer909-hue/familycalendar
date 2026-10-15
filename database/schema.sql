@@ -154,11 +154,15 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   id INT PRIMARY KEY AUTO_INCREMENT,
   user_id INT NOT NULL,
   endpoint TEXT NOT NULL,
+  -- SHA-256 von endpoint - TEXT kann in MySQL nicht direkt eindeutig
+  -- indiziert werden, siehe PushSubscriptionController::subscribe().
+  endpoint_hash VARCHAR(64) NOT NULL,
   p256dh_key VARCHAR(255) NOT NULL,
   auth_key VARCHAR(255) NOT NULL,
   device_info VARCHAR(255) NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE KEY uniq_user_endpoint (user_id, endpoint_hash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------

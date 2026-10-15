@@ -104,6 +104,9 @@ $weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
       <a href="calendar_sources.php" class="btn btn-secondary btn-block">Kalenderquellen verwalten</a>
     </p>
     <p>
+      <a href="push_subscribe.php" class="btn btn-secondary btn-block">Push-Benachrichtigungen</a>
+    </p>
+    <p>
       <a href="logout.php" class="hint-text">Abmelden</a>
     </p>
   </aside>

@@ -4,12 +4,18 @@
     "type": "project",
     "license": "proprietary",
     "require": {
-        "php": ">=8.1",
+        "php": ">=8.2",
         "ext-pdo": "*",
-        "ext-json": "*"
+        "ext-json": "*",
+        "ext-curl": "*",
+        "ext-openssl": "*",
+        "ext-mbstring": "*",
+        "minishlink/web-push": "^11.0",
+        "php-http/curl-client": "^2.3",
+        "nyholm/psr7": "^1.8"
     },
     "suggest": {
-        "minishlink/web-push": "Für den echten Web-Push-Versand (VAPID) statt eines Platzhalters, siehe Konzept Abschnitt 8.",
+        "ext-gmp": "Beschleunigt die VAPID-Verschlüsselung für Push-Benachrichtigungen (sonst reine PHP-Fallback-Mathematik, siehe minishlink/web-push).",
         "rlanvin/php-rrule": "Für die Berechnung wiederkehrender Termine aus recurrence_rule (RRULE), siehe Konzept Abschnitt 4/6.",
         "johngrogg/ics-parser": "Zum Parsen importierter/gestreamter ICS-Dateien, siehe Konzept Abschnitt 2.7."
     },

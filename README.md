@@ -38,6 +38,10 @@ Client-Code ist global (`src/ApiClient.php`, `src/Helpers.php`,
 6. `https://kalender.eastcon.eu/api/health` aufrufen → sollte
    `{"status":"ok",...}` liefern. Danach `https://kalender.eastcon.eu/`
    aufrufen → sollte zur Anmeldung weiterleiten.
+7. **Optional, nur für Push-Benachrichtigungen:** `composer install`
+   ausführen und VAPID-Schlüssel erzeugen (siehe Abschnitt
+   „Push-Benachrichtigungen“ unten). Ohne diesen Schritt läuft alles
+   andere unverändert weiter, Erinnerungen gehen dann nur per Mail.
 
 ## Struktur
 
@@ -170,5 +174,48 @@ Für bereits bestehende Installationen: Migration
 
 Noch offen: eine zentrale Einstellungsseite für
 `notification_preferences` (z. B. „nur eigene Termine“ vs. „alle
-Familientermine“) sowie Push-Benachrichtigungen als Alternative zur
-E-Mail.
+Familientermine“).
+
+## Push-Benachrichtigungen (neu)
+
+**Einzige Stelle im Projekt mit JavaScript.** Web Push funktioniert
+technisch nur über einen Service Worker (`public/sw.js`) + die
+PushManager-API im Browser – dafür gibt es keinen reinen PHP-Weg. Der
+Rest der App bleibt unverändert JS-frei.
+
+**Einzige Stelle mit einer echten Composer-Abhängigkeit.** Die
+VAPID-Verschlüsselung (ECDH + HKDF + AES-128-GCM) ist echte
+Sicherheits-Kryptografie – die wird bewusst NICHT selbst nachgebaut,
+sondern über die geprüfte Library `minishlink/web-push` bezogen
+(plus `php-http/curl-client` + `nyholm/psr7` als minimaler HTTP-Client,
+den die Library benötigt). Dafür einmalig:
+
+```
+composer install
+php bin/generate-vapid-keys.php
+```
+
+Die ausgegebenen `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` in `.env`
+eintragen (`VAPID_SUBJECT` ist eine `mailto:`-Adresse, über die
+Push-Anbieter den Betreiber im Problemfall kontaktieren können).
+
+**Alles andere bleibt ohne composer voll funktionsfähig.** Fehlt
+`vendor/` (kein `composer install` ausgeführt) oder sind die
+VAPID-Keys nicht gesetzt, meldet `PushSender::isConfigured()` das
+zuverlässig zurück – `push_subscribe.php` zeigt dann nur einen
+Hinweistext statt des Aktivieren-Buttons, und Erinnerungen laufen
+unverändert nur per E-Mail. Push ist rein additiv.
+
+Jeder Login-Nutzer aktiviert Push pro Browser/Gerät über
+„Push-Benachrichtigungen“ im Kalender-Sidebar
+(`push_subscribe.php`). `bin/send-reminders.php` schickt fällige
+Erinnerungen jetzt an BEIDE konfigurierten Kanäle (Mail und, falls
+vorhanden, alle Push-Abos des Nutzers); eine Erinnerung gilt als
+erledigt, sobald mindestens ein Kanal tatsächlich versucht wurde.
+Abgelaufene/ungültige Push-Abos (HTTP 404/410 vom Push-Anbieter)
+werden dabei automatisch aus `push_subscriptions` entfernt.
+
+Für bereits bestehende Installationen: Migration
+`database/migrations/005_push_subscriptions_unique.sql` einmalig
+ausführen (ergänzt den Hash-Spalten-Unique-Key, der doppelte Abos
+desselben Geräts verhindert).
