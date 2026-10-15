@@ -7,6 +7,7 @@ namespace Familienkalender\Controllers;
 use Familienkalender\Core\Database;
 use Familienkalender\Core\Request;
 use Familienkalender\Core\Response;
+use Familienkalender\Core\RRule;
 use Familienkalender\Core\TenantContext;
 
 final class EventController
@@ -25,7 +26,7 @@ final class EventController
         $db = Database::connection();
         $stmt = $db->prepare(
             'SELECT e.id, e.title, e.description, e.location, e.starts_at, e.ends_at,
-                    e.all_day, e.scope, e.recurrence_rule, e.category, e.source,
+                    e.all_day, e.scope, e.recurrence_rule, e.recurrence_parent_id, e.category, e.source,
                     e.created_by,
                     GROUP_CONCAT(ep.family_member_id) AS participant_ids
              FROM events e
@@ -66,6 +67,7 @@ final class EventController
         $endsAt = (string) $request->input('ends_at', '');
         $scope = (string) $request->input('scope', 'personal');
         $participantIds = $request->input('participant_ids', []);
+        $recurrenceRule = trim((string) $request->input('recurrence_rule', '')) ?: null;
 
         if ($title === '' || $startsAt === '' || $endsAt === '') {
             Response::error('title, starts_at und ends_at sind erforderlich.', 422);
@@ -75,6 +77,20 @@ final class EventController
         }
         if ($scope === 'personal' && empty($participantIds)) {
             Response::error('Bei scope "personal" muss mindestens eine Person zugeordnet werden.', 422);
+        }
+
+        // Wiederholungsregel vorab validieren/auflösen, BEVOR die Transaktion
+        // beginnt - ein ungültiges RRULE soll gar keinen Termin anlegen.
+        $occurrences = [[
+            'starts_at' => new \DateTimeImmutable($startsAt),
+            'ends_at' => new \DateTimeImmutable($endsAt),
+        ]];
+        if ($recurrenceRule !== null) {
+            try {
+                $occurrences = RRule::expand($recurrenceRule, new \DateTimeImmutable($startsAt), new \DateTimeImmutable($endsAt));
+            } catch (\Throwable $e) {
+                Response::error('Wiederholungsregel ungültig: ' . $e->getMessage(), 422);
+            }
         }
 
         $db = Database::connection();
@@ -98,7 +114,7 @@ final class EventController
                 'ends_at' => $endsAt,
                 'all_day' => $request->input('all_day', false) ? 1 : 0,
                 'scope' => $scope,
-                'recurrence_rule' => $request->input('recurrence_rule'),
+                'recurrence_rule' => $recurrenceRule,
                 'category' => $request->input('category'),
             ]);
             $eventId = (int) $db->lastInsertId();
@@ -113,6 +129,38 @@ final class EventController
 
             $this->syncParticipants($db, $eventId, $participantIds);
 
+            // Wiederkehrende Termine: das erste Vorkommen IST der soeben
+            // angelegte Master-Termin selbst. Ab dem zweiten Vorkommen
+            // werden eigenständige Instanzen angelegt (recurrence_parent_id
+            // = Master), die sich einzeln bearbeiten/löschen lassen, ohne
+            // die restliche Serie zu beeinflussen. Löschen des Masters
+            // löscht per ON DELETE CASCADE automatisch alle Instanzen mit
+            // (siehe deleteSeries()).
+            $childStmt = $db->prepare(
+                'INSERT INTO events
+                    (family_id, created_by, title, description, location, starts_at, ends_at,
+                     all_day, scope, recurrence_parent_id, category, source)
+                 VALUES
+                    (:family_id, :created_by, :title, :description, :location, :starts_at, :ends_at,
+                     :all_day, :scope, :parent_id, :category, "manual")'
+            );
+            foreach (array_slice($occurrences, 1) as $occurrence) {
+                $childStmt->execute([
+                    'family_id' => TenantContext::familyId(),
+                    'created_by' => TenantContext::familyMemberId(),
+                    'title' => $title,
+                    'description' => $request->input('description'),
+                    'location' => $request->input('location'),
+                    'starts_at' => $occurrence['starts_at']->format('Y-m-d H:i:s'),
+                    'ends_at' => $occurrence['ends_at']->format('Y-m-d H:i:s'),
+                    'all_day' => $request->input('all_day', false) ? 1 : 0,
+                    'scope' => $scope,
+                    'parent_id' => $eventId,
+                    'category' => $request->input('category'),
+                ]);
+                $this->syncParticipants($db, (int) $db->lastInsertId(), $participantIds);
+            }
+
             $db->commit();
         } catch (\Throwable $e) {
             $db->rollBack();
@@ -120,7 +168,7 @@ final class EventController
             Response::error('Termin anlegen fehlgeschlagen.', 500);
         }
 
-        Response::json(['id' => $eventId], 201);
+        Response::json(['id' => $eventId, 'occurrences' => count($occurrences)], 201);
     }
 
     /**
@@ -136,7 +184,7 @@ final class EventController
         $db = Database::connection();
         $stmt = $db->prepare(
             'SELECT e.id, e.title, e.description, e.location, e.starts_at, e.ends_at,
-                    e.all_day, e.scope, e.recurrence_rule, e.category, e.source, e.created_by,
+                    e.all_day, e.scope, e.recurrence_rule, e.recurrence_parent_id, e.category, e.source, e.created_by,
                     GROUP_CONCAT(ep.family_member_id) AS participant_ids
              FROM events e
              LEFT JOIN event_participants ep ON ep.event_id = e.id
@@ -213,6 +261,29 @@ final class EventController
     {
         $eventId = (int) $request->params['id'];
         $this->findOwnedEvent($eventId); // wirft 404, falls nicht in eigener Familie
+
+        $db = Database::connection();
+        $db->prepare('DELETE FROM events WHERE id = :id AND family_id = :family_id')
+            ->execute(['id' => $eventId, 'family_id' => TenantContext::familyId()]);
+
+        Response::json(['status' => 'deleted']);
+    }
+
+    /**
+     * DELETE /api/events/{id}/series
+     * Löscht den GESAMTEN Rest einer Wiederholungsserie (nur möglich auf
+     * dem Master-Termin selbst, der die recurrence_rule trägt) - alle
+     * materialisierten Instanzen hängen per ON DELETE CASCADE an
+     * recurrence_parent_id und verschwinden automatisch mit.
+     */
+    public function deleteSeries(Request $request): void
+    {
+        $eventId = (int) $request->params['id'];
+        $event = $this->findOwnedEvent($eventId);
+
+        if ($event['recurrence_rule'] === null || $event['recurrence_parent_id'] !== null) {
+            Response::error('Dieser Termin ist kein Serien-Master (keine Wiederholungsregel oder selbst nur eine Instanz).', 422);
+        }
 
         $db = Database::connection();
         $db->prepare('DELETE FROM events WHERE id = :id AND family_id = :family_id')

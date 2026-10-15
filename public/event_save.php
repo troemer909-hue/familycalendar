@@ -39,6 +39,26 @@ $payload = [
     'description' => trim($_POST['description'] ?? '') ?: null,
 ];
 
+// Wiederholung gilt NUR beim Neu-Anlegen (keine nachträgliche Änderung der
+// Serie) - bei $id (Bearbeiten) wird recurrence_rule absichtlich gar nicht
+// mitgeschickt, damit EventController::update() sie unangetastet lässt.
+if (!$id) {
+    $freqMap = ['daily' => 'DAILY', 'weekly' => 'WEEKLY', 'monthly' => 'MONTHLY', 'yearly' => 'YEARLY'];
+    $repeatFreq = $_POST['repeat_freq'] ?? 'none';
+
+    if ($repeatFreq !== 'none' && isset($freqMap[$repeatFreq])) {
+        $endType = $_POST['repeat_end_type'] ?? 'count';
+
+        if ($endType === 'until' && !empty($_POST['repeat_until'])) {
+            $until = str_replace('-', '', $_POST['repeat_until']); // YYYY-MM-DD -> YYYYMMDD
+            $payload['recurrence_rule'] = "FREQ={$freqMap[$repeatFreq]};UNTIL={$until}";
+        } else {
+            $count = max(1, min(366, (int) ($_POST['repeat_count'] ?? 12)));
+            $payload['recurrence_rule'] = "FREQ={$freqMap[$repeatFreq]};COUNT={$count}";
+        }
+    }
+}
+
 $res = $id
     ? $client->request('PUT', "/api/events/{$id}", $payload)
     : $client->request('POST', '/api/events', $payload);

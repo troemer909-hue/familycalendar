@@ -110,5 +110,36 @@ Zeitzonen werden beim ICS-Import bewusst nicht umgerechnet (lokale
 Zeit wird 1:1 übernommen) – für eine Familie in einer Zeitzone
 ausreichend. Wiederkehrende Termine (RRULE) aus importierten
 Kalendern werden als Einzeltermine pro Vorkommen übernommen, sofern
-der exportierende Kalender sie bereits aufgelöst liefert; eine eigene
-RRULE-Auswertung ist (wie im Konzept vorgesehen) noch offen.
+der exportierende Kalender sie bereits aufgelöst liefert.
+
+## Wiederkehrende Termine (neu)
+
+Beim Neuanlegen eines Termins (`event_form.php`) lässt sich eine
+Wiederholung wählen: Täglich/Wöchentlich/Monatlich/Jährlich, mit
+„Anzahl Wiederholungen“ oder „Enddatum“. Daraus wird eine RRULE
+(`FREQ=...;COUNT=...` oder `FREQ=...;UNTIL=...`) gebaut und von
+`src/Core/RRule.php` (eigener, Composer-freier Expander - siehe
+composer.json "suggest": rlanvin/php-rrule für komplexere Regeln wie
+BYDAY) aufgelöst.
+
+**Wichtig: wiederkehrende Termine werden MATERIALISIERT**, nicht
+virtuell berechnet - jedes Vorkommen landet als eigene Zeile in
+`events`. Der erste Termin ist der „Master“ (trägt die
+`recurrence_rule`), jedes weitere Vorkommen ist eine eigenständige
+Instanz mit `recurrence_parent_id` = Master-ID (neue Spalte, siehe
+`database/migrations/004_recurring_events.sql` für bestehende
+Installationen). Das hat zwei Konsequenzen:
+
+- Eine einzelne Instanz lässt sich wie jeder normale Termin
+  bearbeiten/verschieben/löschen, ohne die restliche Serie zu
+  beeinflussen ("nur diesen Termin löschen").
+- Den Master zu löschen löscht per `ON DELETE CASCADE` automatisch
+  die GESAMTE restliche Serie mit ("ganze Serie löschen",
+  `DELETE /api/events/{id}/series`, nur auf dem Master möglich).
+
+Maximal 366 Vorkommen pro Serie (Sicherheitsgrenze gegen versehentlich
+endlose Regeln - RRULE ohne COUNT/UNTIL wird abgelehnt). Eine bestehende
+Serie lässt sich aktuell **nicht** nachträglich in der Wiederholung
+ändern (z. B. von wöchentlich auf monatlich) - dafür müsste man sie
+löschen und neu anlegen. BYDAY (z. B. "jeden Mo+Mi+Fr") wird ebenfalls
+noch nicht unterstützt, nur FREQ+INTERVAL+COUNT/UNTIL.
