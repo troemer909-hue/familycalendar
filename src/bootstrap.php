@@ -75,6 +75,22 @@ function handleUnauthorized(array $apiResult): void
     }
 }
 
+/**
+ * Bei 403 (z.B. kein Plattform-Admin, siehe admin_*.php) zurück zum
+ * Kalender statt die Seite mit einer rohen API-Fehlermeldung zu zeigen -
+ * die Admin-Seiten verlinken bewusst für alle eingeloggten Nutzer (die
+ * eigentliche Durchsetzung passiert serverseitig in TenantContext::
+ * requirePlatformAdmin()), ein Klick ohne Berechtigung landet so einfach
+ * mit einer verständlichen Meldung zurück auf der Startseite.
+ */
+function handleForbidden(array $apiResult): void
+{
+    if ($apiResult['status'] === 403) {
+        header('Location: calendar.php?error=' . urlencode($apiResult['data']['error'] ?? 'Kein Zugriff.'));
+        exit;
+    }
+}
+
 /** Vergleicht das übermittelte gegen das in der Session hinterlegte CSRF-Token. */
 function csrfTokenValid(?string $submitted): bool
 {

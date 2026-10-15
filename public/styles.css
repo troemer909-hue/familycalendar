@@ -108,3 +108,15 @@ button, .btn {
 .badge.login { background: #dcfce7; color: #166534; }
 .badge.profile { background: #fef3c7; color: #92400e; }
 .badge.admin { background: #dbeafe; color: #1e40af; }
+.badge.trial { background: #fef3c7; color: #92400e; }
+.badge.active { background: #dcfce7; color: #166534; }
+.badge.suspended { background: #fee2e2; color: #b91c1c; }
+.badge.cancelled { background: #e5e7eb; color: #4b5563; }
+
+/* -------------------------- Plattform-Verwaltung -------------------------- */
+.admin-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.admin-table th { text-align: left; font-size: 12px; text-transform: uppercase; color: #94a3b8; padding: 8px 10px; border-bottom: 1px solid #e5e7ec; }
+.admin-table td { padding: 10px; border-bottom: 1px solid #f0f1f4; vertical-align: middle; }
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table select { padding: 6px 8px; font-size: 13px; }
+.admin-filter-row { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }

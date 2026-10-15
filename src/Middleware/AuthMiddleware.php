@@ -31,9 +31,10 @@ final class AuthMiddleware
 
         $db = Database::connection();
         $stmt = $db->prepare(
-            'SELECT id, family_id, role
-             FROM family_members
-             WHERE user_id = :user_id
+            'SELECT fm.id, fm.family_id, fm.role, u.is_platform_admin
+             FROM family_members fm
+             JOIN users u ON u.id = fm.user_id
+             WHERE fm.user_id = :user_id
              LIMIT 1'
         );
         $stmt->execute(['user_id' => $claims['user_id']]);
@@ -48,6 +49,7 @@ final class AuthMiddleware
             familyId: (int) $member['family_id'],
             familyMemberId: (int) $member['id'],
             role: $member['role'],
+            isPlatformAdmin: (bool) $member['is_platform_admin'],
         );
     }
 }
