@@ -133,8 +133,11 @@ CREATE TABLE IF NOT EXISTS reminders (
   user_id INT NOT NULL,
   remind_before_minutes INT NOT NULL DEFAULT 30,
   sent TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  -- Verhindert doppelte Erinnerungen (siehe ReminderController::create).
+  UNIQUE KEY uniq_event_user_offset (event_id, user_id, remind_before_minutes)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------

@@ -112,3 +112,32 @@ ausreichend. Wiederkehrende Termine (RRULE) aus importierten
 Kalendern werden als Einzeltermine pro Vorkommen übernommen, sofern
 der exportierende Kalender sie bereits aufgelöst liefert; eine eigene
 RRULE-Auswertung ist (wie im Konzept vorgesehen) noch offen.
+
+## Erinnerungen (neu)
+
+Jeder Login-Nutzer kann sich im Terminformular (`event_form.php`, Bereich
+„Meine Erinnerungen“, nur bei bestehenden Terminen sichtbar) eigene
+Erinnerungen zu einem Termin einrichten – unabhängig davon, wer den
+Termin angelegt hat (`ReminderController`, Tabelle `reminders`).
+Vorlaufzeiten: 15/30/60/120 Minuten oder 1-2 Tage vorher.
+
+Der tatsächliche Versand läuft per E-Mail (PHP `mail()`, keine
+Composer-Abhängigkeit) über einen Cron-Job, der auf Shared Hosting
+alle paar Minuten laufen sollte:
+
+```
+php /pfad/zum/projekt/bin/send-reminders.php
+```
+
+Eine Erinnerung gilt als fällig, wenn (Terminbeginn − Vorlaufzeit) ≤
+jetzt und der Termin noch nicht begonnen hat; danach wird sie als
+`sent` markiert und nicht erneut verschickt. Absenderadresse/-name
+werden über `MAIL_FROM` / `MAIL_FROM_NAME` in `.env` konfiguriert.
+Für bereits bestehende Installationen: Migration
+`database/migrations/003_reminders_unique.sql` einmalig ausführen
+(verhindert doppelte Erinnerungen bei gleichem Termin/Nutzer/Vorlauf).
+
+Noch offen: eine zentrale Einstellungsseite für
+`notification_preferences` (z. B. „nur eigene Termine“ vs. „alle
+Familientermine“) sowie Push-Benachrichtigungen als Alternative zur
+E-Mail.
