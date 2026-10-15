@@ -31,6 +31,9 @@ CREATE TABLE IF NOT EXISTS families (
   name VARCHAR(255) NOT NULL,
   plan_id INT NULL,
   status ENUM('trial','active','suspended','cancelled') NOT NULL DEFAULT 'trial',
+  -- Geheimes Token für den Outbound-ICS-Export (siehe IcsExportController) -
+  -- NULL = noch nicht erzeugt bzw. deaktiviert.
+  ics_export_token VARCHAR(64) NULL UNIQUE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (plan_id) REFERENCES plans(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

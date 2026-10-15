@@ -400,6 +400,33 @@ Kein Token-Refresh/Logout nötig: die Rolle wird bei jedem Request frisch
 aus der DB gelesen (`AuthMiddleware`), die Änderung wirkt also sofort auf
 den nächsten Request des bisherigen Admins. Keine Migration nötig.
 
+## Outbound-ICS-Export (neu)
+
+Gegenstück zum Import/Abo aus „Kalenderquellen“: über „Kalender-Abo
+(ICS-Export)“ im Sidebar erzeugt ein Admin einen geheimen Link
+(`public/ics_export.php`, `IcsExportController`,
+`families.ics_export_token`), den man in Google Kalender/Outlook/Apple
+Kalender als Abo eintragen kann - read-only, wird dort automatisch
+regelmäßig neu geladen.
+
+- **`GET /api/ics/{token}.ics`** ist bewusst NICHT per Bearer-Token
+  geschützt (Kalender-Apps können keine Auth-Header senden) - die
+  Sicherheit kommt stattdessen vom geheimen, 128-Bit-zufälligen Token
+  selbst in der URL. Jeder Familienadmin kann den Link jederzeit
+  erneuern (alter Link wird sofort ungültig) oder deaktivieren.
+- **`src/Core/IcsExporter.php`** ist das Gegenstück zu `IcsParser.php`
+  (RFC 5545 in die andere Richtung: Text-Escaping, 75-Octet-
+  Zeilenfaltung, inklusives DB-Enddatum ↔ exklusives ICS-`DTEND` bei
+  ganztägigen Terminen). Beide Klassen wurden gegeneinander getestet
+  (Export → Re-Import muss wieder denselben Termin ergeben).
+- Enthält ein rollierendes Zeitfenster (6 Monate zurück bis 2 Jahre
+  voraus) statt aller Termine aller Zeiten - wiederkehrende Termine
+  sind bereits materialisiert (siehe RRULE), ein unbegrenzter Export
+  würde sonst stetig wachsen.
+
+Für bereits bestehende Installationen: Migration
+`database/migrations/009_ics_export_token.sql` einmalig ausführen.
+
 ## Tests (neu)
 
 PHPUnit ist eine reine Dev-Abhängigkeit (`require-dev` in `composer.json`)

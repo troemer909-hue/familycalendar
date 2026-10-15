@@ -18,4 +18,14 @@ final class Response
     {
         self::json(['error' => $message], $status);
     }
+
+    /** Für den Outbound-ICS-Export (siehe IcsExportController::feed()). */
+    public static function ics(string $body): never
+    {
+        http_response_code(200);
+        header('Content-Type: text/calendar; charset=utf-8');
+        header('Content-Disposition: inline; filename="familienkalender.ics"');
+        echo $body;
+        exit;
+    }
 }
