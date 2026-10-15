@@ -282,3 +282,32 @@ unabhängige Verteidigungsschicht (u. a. falls ein Browser SameSite
 nicht unterstützt oder ein Angriff von einer Subdomain käme).
 
 Keine Datenbankänderung nötig, reiner Session-Mechanismus.
+
+## Passwort-Reset (neu)
+
+„Passwort vergessen?“ auf der Login-Seite führt zu
+`public/forgot_password.php` (E-Mail eingeben) →
+`AuthController::requestPasswordReset()` erzeugt einen zufälligen Code
+(32 Byte, `random_bytes`), speichert davon NUR den SHA-256-Hash in der
+neuen Tabelle `password_resets` (60 Minuten gültig) und verschickt den
+rohen Code per Mail (`Mailer::send()`, PHP `mail()`, keine neue
+Abhängigkeit). `public/reset_password.php` nimmt den Code (aus dem
+Link oder manuell eingetippt) plus neues Passwort entgegen →
+`AuthController::confirmPasswordReset()` prüft Hash + Ablauf, setzt das
+Passwort und invalidiert alle offenen Codes des Nutzers.
+
+Zwei bewusste Sicherheitsentscheidungen:
+
+- **Kein User-Enumeration-Leak**: `password-reset/request` antwortet
+  IMMER mit derselben generischen Erfolgsmeldung, egal ob die
+  E-Mail-Adresse existiert – nur bei existierendem Konto wird tatsächlich
+  eine Mail verschickt (analog zur bereits bestehenden `login()`-Logik).
+- **Kein Host-Header-Link**: Der Link in der Mail wird ausschließlich aus
+  der server-seitig konfigurierten `APP_PUBLIC_URL` (`.env`) gebaut,
+  NICHT aus dem Host-Header des Requests (klassische "Password Reset
+  Poisoning"-Lücke). Ist `APP_PUBLIC_URL` nicht gesetzt, bekommt der
+  Nutzer statt eines Links nur den rohen Code zum manuellen Eintragen auf
+  `reset_password.php` – funktioniert immer, auch ohne diese Konfiguration.
+
+Für bereits bestehende Installationen: Migration
+`database/migrations/007_password_resets.sql` einmalig ausführen.

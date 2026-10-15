@@ -67,6 +67,8 @@ $authMiddleware = new AuthMiddleware();
 $auth = new AuthController();
 $router->post('/api/auth/register', [$auth, 'register']);
 $router->post('/api/auth/login', [$auth, 'login']);
+$router->post('/api/auth/password-reset/request', [$auth, 'requestPasswordReset']);
+$router->post('/api/auth/password-reset/confirm', [$auth, 'confirmPasswordReset']);
 
 // -- Mitglieder (geschützt) ----------------------------------------------
 $members = new MemberController();

@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../src/bootstrap.php';
 $config = loadConfig();
 $error = $_GET['error'] ?? null;
+$notice = $_GET['notice'] ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -30,7 +31,11 @@ $error = $_GET['error'] ?? null;
       </form>
 
       <p class="switch-link">Noch keine Familie? <a href="register.php">Familie registrieren</a></p>
+      <p class="switch-link"><a href="forgot_password.php">Passwort vergessen?</a></p>
 
+      <?php if ($notice): ?>
+        <p class="success-box"><?= h($notice) ?></p>
+      <?php endif; ?>
       <?php if ($error): ?>
         <p class="error-box"><?= h($error) ?></p>
       <?php endif; ?>
