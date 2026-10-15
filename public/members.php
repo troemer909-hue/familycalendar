@@ -38,6 +38,7 @@ $error = $_GET['error'] ?? null;
             <a class="btn btn-secondary" href="member_upgrade_form.php?id=<?= (int) $m['id'] ?>">Zu Login hochstufen</a>
           <?php elseif ($m['role'] !== 'admin'): ?>
             <form method="post" action="member_downgrade.php" style="margin:0;">
+              <?= csrfField() ?>
               <input type="hidden" name="id" value="<?= (int) $m['id'] ?>" />
               <button type="submit" class="btn btn-secondary">Login entziehen</button>
             </form>
@@ -48,6 +49,7 @@ $error = $_GET['error'] ?? null;
 
     <h2 style="font-size:16px;">Neues Profil ohne Login (z. B. für ein Kind)</h2>
     <form method="post" action="member_add.php">
+      <?= csrfField() ?>
       <div class="row">
         <div>
           <label>Name</label>

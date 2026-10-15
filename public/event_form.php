@@ -91,6 +91,7 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
     <?php if ($error): ?><p class="error-box"><?= h($error) ?></p><?php endif; ?>
 
     <form method="post" action="event_save.php">
+      <?= csrfField() ?>
       <input type="hidden" name="id" value="<?= $eventId ? (int) $eventId : '' ?>" />
       <input type="hidden" name="back_month" value="<?= h($backMonth) ?>" />
 
@@ -173,6 +174,7 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
     <?php if ($event): ?>
       <div style="display:flex;gap:10px;margin-top:12px;">
         <form method="post" action="event_delete.php" style="margin:0;">
+          <?= csrfField() ?>
           <input type="hidden" name="id" value="<?= (int) $eventId ?>" />
           <input type="hidden" name="back_month" value="<?= h($backMonth) ?>" />
           <button type="submit" class="btn <?= $isSeriesMaster ? 'btn-secondary' : 'btn-danger' ?>">
@@ -181,6 +183,7 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
         </form>
         <?php if ($isSeriesMaster): ?>
           <form method="post" action="event_delete_series.php" style="margin:0;">
+            <?= csrfField() ?>
             <input type="hidden" name="id" value="<?= (int) $eventId ?>" />
             <input type="hidden" name="back_month" value="<?= h($backMonth) ?>" />
             <button type="submit" class="btn btn-danger">Ganze Serie löschen</button>
@@ -204,6 +207,7 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
               <span class="name"><?= h(formatReminderOffset((int) $r['remind_before_minutes'])) ?></span>
               <?php if ($r['sent']): ?><span class="badge profile">Bereits versendet</span><?php endif; ?>
               <form method="post" action="reminder_delete.php" style="margin:0;">
+                <?= csrfField() ?>
                 <input type="hidden" name="id" value="<?= (int) $r['id'] ?>" />
                 <input type="hidden" name="event_id" value="<?= (int) $eventId ?>" />
                 <input type="hidden" name="back_month" value="<?= h($backMonth) ?>" />
@@ -215,6 +219,7 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
       <?php endif; ?>
 
       <form method="post" action="reminder_add.php" style="margin-top:12px;">
+        <?= csrfField() ?>
         <input type="hidden" name="event_id" value="<?= (int) $eventId ?>" />
         <input type="hidden" name="back_month" value="<?= h($backMonth) ?>" />
         <label>Erinnerung hinzufügen</label>

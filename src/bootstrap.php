@@ -74,3 +74,54 @@ function handleUnauthorized(array $apiResult): void
         exit;
     }
 }
+
+/** Vergleicht das übermittelte gegen das in der Session hinterlegte CSRF-Token. */
+function csrfTokenValid(?string $submitted): bool
+{
+    $expected = $_SESSION['csrf_token'] ?? null;
+    return is_string($submitted) && is_string($expected) && $submitted !== '' && hash_equals($expected, $submitted);
+}
+
+/**
+ * Zentrale CSRF-Prüfung für klassische Formular-POST-Handler. Muss als
+ * ERSTES im Handler aufgerufen werden, bevor irgendeine Aktion gegen die
+ * API läuft. Das erwartete Token kommt aus csrfToken()/csrfField() (siehe
+ * Helpers.php), die in jedes Formular ein verstecktes Feld einbetten.
+ */
+function requireCsrf(): void
+{
+    if (csrfTokenValid($_POST['csrf_token'] ?? null)) {
+        return;
+    }
+
+    http_response_code(400);
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">'
+        . '<title>Sicherheitsprüfung fehlgeschlagen</title>'
+        . '<link rel="stylesheet" href="styles.css" /></head><body>'
+        . '<div class="main-area"><div class="form-card">'
+        . '<h1>Sicherheitsprüfung fehlgeschlagen</h1>'
+        . '<p class="error-box">Das Formular ist abgelaufen oder ungültig (CSRF-Token fehlt/stimmt nicht). '
+        . 'Bitte zurückgehen und erneut versuchen.</p>'
+        . '<p><a href="javascript:history.back()" class="btn btn-secondary">Zurück</a></p>'
+        . '</div></div></body></html>';
+    exit;
+}
+
+/**
+ * Dieselbe Prüfung für die fetch()-basierten JSON-Endpunkte (Push-Abo) -
+ * dort liegt das Token im decodierten Request-Body statt in $_POST, und
+ * eine JSON-Fehlermeldung passt besser zum Rest der Antwort als HTML.
+ */
+function requireCsrfJson(array $body): void
+{
+    $submitted = $body['csrf_token'] ?? null;
+    if (csrfTokenValid(is_string($submitted) ? $submitted : null)) {
+        return;
+    }
+
+    http_response_code(400);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['error' => 'Sicherheitsprüfung fehlgeschlagen (CSRF-Token fehlt/stimmt nicht).']);
+    exit;
+}

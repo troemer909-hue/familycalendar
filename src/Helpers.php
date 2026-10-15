@@ -7,6 +7,28 @@ function h(?string $value): string
     return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
 }
 
+/**
+ * CSRF-Schutz für die POST-Formulare dieses (session-basierten) Clients.
+ * Ein Token pro Session reicht aus - es wird bei der ersten Verwendung
+ * erzeugt und bleibt über die gesamte Session gültig (auch über
+ * session_regenerate_id(true) nach dem Login hinweg, da dabei die
+ * $_SESSION-Daten erhalten bleiben). Geprüft wird es zentral in
+ * requireCsrf() (siehe bootstrap.php).
+ */
+function csrfToken(): string
+{
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+/** Fertiges Hidden-Field zum Einbetten in <form method="post">. */
+function csrfField(): string
+{
+    return '<input type="hidden" name="csrf_token" value="' . h(csrfToken()) . '" />';
+}
+
 function formatGermanMonth(\DateTimeImmutable $date): string
 {
     $months = [

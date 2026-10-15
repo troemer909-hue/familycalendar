@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../src/bootstrap.php';
 requireLogin();
+requireCsrf();
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB reicht für einen Jahreskalender locker
 

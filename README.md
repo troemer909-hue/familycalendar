@@ -250,3 +250,35 @@ Für bereits bestehende Installationen: Migration
 ausführen (ergänzt `channel_mail`/`channel_push`, die `own_events`,
 `family_events` und `reminder_default_minutes` sind bereits seit der
 Registrierung/dem Upgrade auf einen Login vorhanden).
+
+## CSRF-Schutz (neu)
+
+Alle POST-Formulare des (session-basierten) PHP-Clients tragen jetzt ein
+verstecktes `csrf_token`-Feld, das gegen ein in der PHP-Session
+hinterlegtes Token geprüft wird (`csrfToken()`/`csrfField()` in
+`src/Helpers.php`, `requireCsrf()`/`requireCsrfJson()` in
+`src/bootstrap.php`). Jeder POST-Handler (`event_save.php`,
+`member_add.php`, `login_submit.php`, … – alle 16 Stück) ruft
+`requireCsrf()` als ERSTES auf, bevor irgendeine Aktion gegen die API
+läuft; bei fehlendem/falschem Token gibt es sofort `HTTP 400` statt
+jeder weiteren Verarbeitung.
+
+Betrifft nur den Client (`public/*.php`), nicht die JSON-API selbst
+(`/api/...`): die ist bewusst zustandslos (Bearer-Token statt Cookie,
+siehe Abschnitt „Warum kein direkter Aufruf“) und damit nicht
+CSRF-anfällig – ein Angreifer kennt den Bearer-Token eines fremden
+Nutzers nicht und kann ihn nicht automatisch mitschicken lassen, anders
+als bei Session-Cookies.
+
+Die zwei fetch()-basierten JSON-Endpunkte für Push
+(`push_subscribe_save.php`/`push_unsubscribe_save.php`) bekommen das
+Token stattdessen im JSON-Body mit (`requireCsrfJson()`), eingebettet
+als JS-Variable in `push_subscribe.php`.
+
+Ergänzt die bereits bestehende `SameSite=Lax`-Cookie-Einstellung
+(`src/bootstrap.php`), die die meisten klassischen Cross-Site-POSTs
+schon vorher blockiert hat – die expliziten Tokens sind eine zweite,
+unabhängige Verteidigungsschicht (u. a. falls ein Browser SameSite
+nicht unterstützt oder ein Angriff von einer Subdomain käme).
+
+Keine Datenbankänderung nötig, reiner Session-Mechanismus.

@@ -42,6 +42,7 @@ $error = $_GET['error'] ?? null;
     <?php if ($prefsError): ?><p class="error-box"><?= h($prefsError) ?></p><?php endif; ?>
 
     <form method="post" action="notification_settings_save.php">
+      <?= csrfField() ?>
       <h2 style="font-size:16px;margin-top:20px;">Für welche Termine?</h2>
       <label class="checkbox-label">
         <input type="checkbox" name="own_events" value="1" <?= $prefs['own_events'] ? 'checked' : '' ?> />
