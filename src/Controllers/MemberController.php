@@ -166,6 +166,58 @@ final class MemberController
         Response::json(['status' => 'downgraded', 'member_id' => $memberId]);
     }
 
+    /**
+     * POST /api/members/{id}/transfer-admin
+     * Übergibt die Familienadmin-Rolle an ein anderes Vollmitglied (muss
+     * bereits ein eigenes Login haben) und stuft sich selbst zu "member"
+     * herab. Es gibt bewusst immer GENAU EINEN Admin pro Familie - darauf
+     * verlässt sich z.B. downgrade() ("Dem Familienadmin kann das Login
+     * nicht entzogen werden").
+     */
+    public function transferAdmin(Request $request): void
+    {
+        TenantContext::requireAdmin();
+
+        $targetId = (int) $request->params['id'];
+        $currentMemberId = TenantContext::familyMemberId();
+
+        if ($targetId === $currentMemberId) {
+            Response::error('Du bist bereits Admin.', 409);
+        }
+
+        $db = Database::connection();
+        $stmt = $db->prepare(
+            'SELECT id, member_type FROM family_members WHERE id = :id AND family_id = :family_id'
+        );
+        $stmt->execute(['id' => $targetId, 'family_id' => TenantContext::familyId()]);
+        $target = $stmt->fetch();
+
+        if (!$target) {
+            Response::error('Person nicht gefunden.', 404);
+        }
+        if ($target['member_type'] !== 'login') {
+            Response::error('Diese Person braucht zuerst ein eigenes Login, bevor sie Admin werden kann.', 409);
+        }
+
+        $db->beginTransaction();
+        try {
+            $db->prepare('UPDATE family_members SET role = "member" WHERE id = :id')
+                ->execute(['id' => $currentMemberId]);
+            $db->prepare('UPDATE family_members SET role = "admin" WHERE id = :id')
+                ->execute(['id' => $targetId]);
+            $db->commit();
+        } catch (\Throwable $e) {
+            $db->rollBack();
+            error_log('Admin-Übertragung fehlgeschlagen: ' . $e->getMessage());
+            Response::error('Admin-Übertragung fehlgeschlagen.', 500);
+        }
+
+        // Die eigene Session bleibt gültig (nur noch als "member") - die
+        // Rolle wird bei jedem Request frisch aus der DB gelesen (siehe
+        // AuthMiddleware), kein Token-Refresh/Logout nötig.
+        Response::json(['status' => 'transferred', 'new_admin_member_id' => $targetId]);
+    }
+
     private function assertMemberLimitNotReached(\PDO $db): void
     {
         $stmt = $db->prepare(
