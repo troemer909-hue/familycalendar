@@ -172,9 +172,9 @@ Für bereits bestehende Installationen: Migration
 `database/migrations/003_reminders_unique.sql` einmalig ausführen
 (verhindert doppelte Erinnerungen bei gleichem Termin/Nutzer/Vorlauf).
 
-Noch offen: eine zentrale Einstellungsseite für
-`notification_preferences` (z. B. „nur eigene Termine“ vs. „alle
-Familientermine“).
+Zentrale Ein/Aus-Schalter für diese Erinnerungen (welche Terminbereiche,
+welche Kanäle) stehen in den „Benachrichtigungseinstellungen“ – siehe
+Abschnitt weiter unten.
 
 ## Push-Benachrichtigungen (neu)
 
@@ -219,3 +219,34 @@ Für bereits bestehende Installationen: Migration
 `database/migrations/005_push_subscriptions_unique.sql` einmalig
 ausführen (ergänzt den Hash-Spalten-Unique-Key, der doppelte Abos
 desselben Geräts verhindert).
+
+## Benachrichtigungseinstellungen (neu)
+
+Zentrale Seite „Benachrichtigungseinstellungen“ im Kalender-Sidebar
+(`public/notification_settings.php`, `NotificationPreferenceController`,
+Tabelle `notification_preferences`). Jeder Login-Nutzer hat dort vier
+Schalter plus eine Standard-Vorlaufzeit:
+
+- **Terminbereich**: Erinnerungen zu persönlichen Terminen (`own_events`)
+  bzw. zu Familienterminen (`family_events`) an/aus.
+- **Kanal**: per E-Mail (`channel_mail`) bzw. per Push
+  (`channel_push`) an/aus.
+- **`reminder_default_minutes`**: Vorschlagswert für die
+  Vorlaufzeit-Auswahl beim Anlegen neuer Erinnerungen in
+  `event_form.php`.
+
+Wichtig: Diese Schalter wirken **zusätzlich** zu den einzelnen
+Erinnerungen, die ein Nutzer pro Termin anlegt (`ReminderController`),
+nicht statt ihnen. Ist z. B. „Familientermine“ hier deaktiviert, stellt
+`bin/send-reminders.php` fällige Erinnerungen zu `events.scope = 'family'`
+nicht zu – die Erinnerung bleibt dabei unverändert bestehen (`sent = 0`)
+und wird zugestellt, sobald der Schalter wieder aktiviert wird. Sind
+dagegen beide Kanäle deaktiviert, gibt es nichts zuzustellen; die
+Erinnerung wird dann direkt als erledigt markiert (kein sinnloses
+erneutes Prüfen bei jedem Cron-Lauf).
+
+Für bereits bestehende Installationen: Migration
+`database/migrations/006_notification_preferences_channels.sql` einmalig
+ausführen (ergänzt `channel_mail`/`channel_push`, die `own_events`,
+`family_events` und `reminder_default_minutes` sind bereits seit der
+Registrierung/dem Upgrade auf einen Login vorhanden).

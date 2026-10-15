@@ -25,10 +25,17 @@ if ($eventId) {
 
 // -- Eigene Erinnerungen zu diesem Termin (nur bei bestehenden Terminen) ---
 $reminders = [];
+$reminderDefaultMinutes = 30;
 if ($eventId) {
     $remindersRes = $client->request('GET', "/api/events/{$eventId}/reminders");
     handleUnauthorized($remindersRes);
     $reminders = $remindersRes['ok'] ? $remindersRes['data'] : [];
+
+    $prefsRes = $client->request('GET', '/api/notification-preferences');
+    handleUnauthorized($prefsRes);
+    if ($prefsRes['ok']) {
+        $reminderDefaultMinutes = $prefsRes['data']['reminder_default_minutes'];
+    }
 }
 
 function formatReminderOffset(int $minutes): string
@@ -182,7 +189,11 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
       </div>
 
       <h2 style="font-size:16px;margin-top:28px;">Meine Erinnerungen</h2>
-      <p class="hint-text">Nur für dich persönlich - per E-Mail, unabhängig davon, wer den Termin angelegt hat.</p>
+      <p class="hint-text">
+        Nur für dich persönlich, unabhängig davon, wer den Termin angelegt
+        hat. Zugestellt per E-Mail und/oder Push, je nach deinen
+        <a href="notification_settings.php">Benachrichtigungseinstellungen</a>.
+      </p>
 
       <?php if (empty($reminders)): ?>
         <p class="hint-text">Noch keine Erinnerung für diesen Termin eingerichtet.</p>
@@ -209,12 +220,9 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
         <label>Erinnerung hinzufügen</label>
         <div class="row">
           <select name="remind_before_minutes">
-            <option value="15">15 Minuten vorher</option>
-            <option value="30" selected>30 Minuten vorher</option>
-            <option value="60">1 Stunde vorher</option>
-            <option value="120">2 Stunden vorher</option>
-            <option value="1440">1 Tag vorher</option>
-            <option value="2880">2 Tage vorher</option>
+            <?php foreach ([15 => '15 Minuten vorher', 30 => '30 Minuten vorher', 60 => '1 Stunde vorher', 120 => '2 Stunden vorher', 1440 => '1 Tag vorher', 2880 => '2 Tage vorher'] as $value => $label): ?>
+              <option value="<?= $value ?>" <?= $reminderDefaultMinutes === $value ? 'selected' : '' ?>><?= $label ?></option>
+            <?php endforeach; ?>
           </select>
           <button type="submit" class="btn btn-secondary">Hinzufügen</button>
         </div>

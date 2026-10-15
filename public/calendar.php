@@ -107,6 +107,9 @@ $weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
       <a href="push_subscribe.php" class="btn btn-secondary btn-block">Push-Benachrichtigungen</a>
     </p>
     <p>
+      <a href="notification_settings.php" class="btn btn-secondary btn-block">Benachrichtigungseinstellungen</a>
+    </p>
+    <p>
       <a href="logout.php" class="hint-text">Abmelden</a>
     </p>
   </aside>

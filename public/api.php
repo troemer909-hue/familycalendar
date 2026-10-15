@@ -33,6 +33,7 @@ use Familienkalender\Controllers\AuthController;
 use Familienkalender\Controllers\CalendarSourceController;
 use Familienkalender\Controllers\EventController;
 use Familienkalender\Controllers\MemberController;
+use Familienkalender\Controllers\NotificationPreferenceController;
 use Familienkalender\Controllers\PushSubscriptionController;
 use Familienkalender\Controllers\ReminderController;
 use Familienkalender\Core\Env;
@@ -94,6 +95,11 @@ $push = new PushSubscriptionController();
 $router->get('/api/push/vapid-public-key', [$push, 'vapidPublicKey'], [$authMiddleware]);
 $router->post('/api/push/subscribe', [$push, 'subscribe'], [$authMiddleware]);
 $router->delete('/api/push/subscribe', [$push, 'unsubscribe'], [$authMiddleware]);
+
+// -- Benachrichtigungseinstellungen (geschützt, persönlich je Login-Nutzer)
+$notificationPreferences = new NotificationPreferenceController();
+$router->get('/api/notification-preferences', [$notificationPreferences, 'show'], [$authMiddleware]);
+$router->put('/api/notification-preferences', [$notificationPreferences, 'update'], [$authMiddleware]);
 
 // -- Kalenderquellen: ICS/CSV-Import & ICS-Abos (geschützt) -------------
 $calendarSources = new CalendarSourceController();

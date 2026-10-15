@@ -54,6 +54,7 @@ button, .btn {
 .btn-block { width: 100%; margin-top: 16px; text-align: center; }
 
 .error-box { background: #fee2e2; color: #b91c1c; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 14px; }
+.success-box { background: #dcfce7; color: #15803d; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 14px; }
 .hint-text { color: #64748b; font-size: 13px; }
 .switch-link { font-size: 13px; text-align: center; margin-top: 12px; }
 

@@ -173,6 +173,11 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
   own_events TINYINT(1) NOT NULL DEFAULT 1,
   family_events TINYINT(1) NOT NULL DEFAULT 1,
   changes TINYINT(1) NOT NULL DEFAULT 1,
+  -- Globale Kanal-Schalter: gelten für ALLE Erinnerungen des Nutzers,
+  -- zusätzlich zu (nicht statt) den einzelnen Erinnerungen, die er pro
+  -- Termin anlegt (siehe bin/send-reminders.php).
+  channel_mail TINYINT(1) NOT NULL DEFAULT 1,
+  channel_push TINYINT(1) NOT NULL DEFAULT 1,
   reminder_default_minutes INT NOT NULL DEFAULT 30,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
