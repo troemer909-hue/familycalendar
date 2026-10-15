@@ -72,12 +72,13 @@ $router->post('/api/auth/register', [$auth, 'register']);
 $router->post('/api/auth/login', [$auth, 'login']);
 $router->post('/api/auth/password-reset/request', [$auth, 'requestPasswordReset']);
 $router->post('/api/auth/password-reset/confirm', [$auth, 'confirmPasswordReset']);
+$router->post('/api/auth/invite/accept', [$auth, 'acceptInvite']);
 
 // -- Mitglieder (geschützt) ----------------------------------------------
 $members = new MemberController();
 $router->get('/api/members', [$members, 'index'], [$authMiddleware]);
 $router->post('/api/members', [$members, 'createProfile'], [$authMiddleware]);
-$router->post('/api/members/{id}/upgrade', [$members, 'upgrade'], [$authMiddleware]);
+$router->post('/api/members/{id}/invite', [$members, 'invite'], [$authMiddleware]);
 $router->delete('/api/members/{id}/login', [$members, 'downgrade'], [$authMiddleware]);
 $router->post('/api/members/{id}/transfer-admin', [$members, 'transferAdmin'], [$authMiddleware]);
 

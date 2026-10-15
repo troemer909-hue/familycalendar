@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Familienkalender\Controllers;
 
 use Familienkalender\Core\Database;
+use Familienkalender\Core\Env;
+use Familienkalender\Core\Mailer;
 use Familienkalender\Core\Request;
 use Familienkalender\Core\Response;
 use Familienkalender\Core\TenantContext;
@@ -63,21 +65,23 @@ final class MemberController
     }
 
     /**
-     * POST /api/members/{id}/upgrade
-     * Body: { email, password }
-     * Stuft ein bestehendes Profil ohne Login zu einem Vollmitglied hoch,
-     * ohne die bisherige family_member-ID (und damit Termine/Historie) zu verlieren.
+     * POST /api/members/{id}/invite
+     * Body: { email }
+     * Lädt eine Person per E-Mail ein, ihr bestehendes Profil (ohne Login)
+     * zu einem eigenen Vollmitglied-Login hochzustufen - der Admin gibt
+     * bewusst NUR die E-Mail-Adresse an, das Passwort wählt die eingeladene
+     * Person selbst über den Link (siehe AuthController::acceptInvite()).
+     * Kein Passwort-Teilen außerhalb der App mehr nötig.
      */
-    public function upgrade(Request $request): void
+    public function invite(Request $request): void
     {
         TenantContext::requireAdmin();
 
         $memberId = (int) $request->params['id'];
         $email = trim((string) $request->input('email', ''));
-        $password = (string) $request->input('password', '');
 
-        if ($email === '' || strlen($password) < 8) {
-            Response::error('email und ein Passwort (min. 8 Zeichen) sind erforderlich.', 422);
+        if ($email === '') {
+            Response::error('email ist erforderlich.', 422);
         }
 
         $db = Database::connection();
@@ -101,30 +105,50 @@ final class MemberController
             Response::error('Diese E-Mail-Adresse wird bereits verwendet.', 409);
         }
 
-        $db->beginTransaction();
-        try {
-            $db->prepare('INSERT INTO users (email, password_hash) VALUES (:email, :hash)')
-                ->execute([
-                    'email' => $email,
-                    'hash' => password_hash($password, PASSWORD_BCRYPT),
-                ]);
-            $userId = (int) $db->lastInsertId();
+        // Noch nicht eingelöste alte Einladungen für diese Person verfallen
+        // lassen - immer nur die zuletzt versendete Einladung soll gelten.
+        $db->prepare('DELETE FROM member_invites WHERE family_member_id = :id AND used_at IS NULL')
+            ->execute(['id' => $memberId]);
 
-            $db->prepare(
-                'UPDATE family_members SET user_id = :user_id, member_type = "login" WHERE id = :id'
-            )->execute(['user_id' => $userId, 'id' => $memberId]);
+        $token = bin2hex(random_bytes(32));
+        $db->prepare(
+            'INSERT INTO member_invites (family_member_id, email, token_hash, expires_at)
+             VALUES (:id, :email, :hash, DATE_ADD(NOW(), INTERVAL 7 DAY))'
+        )->execute([
+            'id' => $memberId,
+            'email' => $email,
+            'hash' => hash('sha256', $token),
+        ]);
 
-            $db->prepare('INSERT INTO notification_preferences (user_id) VALUES (:user_id)')
-                ->execute(['user_id' => $userId]);
+        $this->sendInviteMail($email, $token);
 
-            $db->commit();
-        } catch (\Throwable $e) {
-            $db->rollBack();
-            error_log('Upgrade fehlgeschlagen: ' . $e->getMessage());
-            Response::error('Upgrade fehlgeschlagen.', 500);
+        Response::json(['status' => 'invited', 'member_id' => $memberId]);
+    }
+
+    /**
+     * Baut den Einladungs-Link NUR aus der server-seitig konfigurierten
+     * APP_PUBLIC_URL (.env) - bewusst NICHT aus dem Host-Header des
+     * Requests (siehe AuthController::sendResetMail() für denselben Grund).
+     * Ist APP_PUBLIC_URL nicht gesetzt, bekommt die eingeladene Person
+     * stattdessen den rohen Code zum manuellen Eintragen.
+     */
+    private function sendInviteMail(string $email, string $token): void
+    {
+        $publicUrl = rtrim((string) Env::get('APP_PUBLIC_URL', ''), '/');
+
+        $body = $publicUrl !== ''
+            ? "Du wurdest zum Familienkalender eingeladen. Klicke auf folgenden Link, "
+                . "um dein eigenes Passwort festzulegen (7 Tage gültig):\n\n"
+                . "{$publicUrl}/accept_invite.php?token={$token}\n\n"
+                . "Falls du das nicht erwartet hast, kannst du diese E-Mail ignorieren."
+            : "Du wurdest zum Familienkalender eingeladen. Dein Code, um dein eigenes "
+                . "Passwort festzulegen (7 Tage gültig):\n\n{$token}\n\n"
+                . "Trage ihn auf der Seite \"Einladung annehmen\" ein. "
+                . "Falls du das nicht erwartet hast, kannst du diese E-Mail ignorieren.";
+
+        if (!Mailer::send($email, 'Einladung zum Familienkalender', $body)) {
+            error_log("Einladungs-Mail an {$email} konnte nicht versendet werden.");
         }
-
-        Response::json(['status' => 'upgraded', 'member_id' => $memberId], 200);
     }
 
     /**

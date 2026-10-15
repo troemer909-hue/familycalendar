@@ -213,4 +213,21 @@ CREATE TABLE IF NOT EXISTS login_attempts (
   INDEX idx_ip_created (ip_address, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ---------------------------------------------------------------------
+-- Einladungs-Tokens (siehe MemberController::invite() /
+-- AuthController::acceptInvite())
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS member_invites (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  family_member_id INT NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  -- SHA-256 des Tokens, NICHT der Token selbst - analog zu password_resets.
+  token_hash VARCHAR(64) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  used_at DATETIME NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (family_member_id) REFERENCES family_members(id) ON DELETE CASCADE,
+  UNIQUE KEY uniq_token_hash (token_hash)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;

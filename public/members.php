@@ -37,7 +37,7 @@ $notice = $_GET['notice'] ?? null;
           <?php endif; ?>
 
           <?php if ($m['member_type'] === 'profile'): ?>
-            <a class="btn btn-secondary" href="member_upgrade_form.php?id=<?= (int) $m['id'] ?>">Zu Login hochstufen</a>
+            <a class="btn btn-secondary" href="member_invite_form.php?id=<?= (int) $m['id'] ?>">Einladen (eigenes Login)</a>
           <?php elseif ($m['role'] !== 'admin'): ?>
             <form method="post" action="member_downgrade.php" style="margin:0;">
               <?= csrfField() ?>

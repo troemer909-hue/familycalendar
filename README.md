@@ -463,3 +463,36 @@ composer test:integration  # Integration-Tests - braucht eine echte MySQL-Testda
 GitHub-Actions-Workflow unter `.github/workflows/tests.yml`: startet
 einen MySQL-Service-Container, installiert die Dev-Abhängigkeiten,
 prüft `php -l` über das gesamte Repo und führt beide Suiten aus.
+
+Für End-to-End-Tests, die den Inhalt einer tatsächlich "versendeten"
+Mail brauchen (Passwort-Reset-/Einladungs-Codes), läuft der
+API-Testserver mit `sendmail_path` auf `tests/Support/fake-sendmail.sh`
+umgebogen – schreibt jede Mail in eine Datei statt sie wirklich zu
+verschicken, ausgelesen über `tests/Support/MailCapture.php`. Kein
+echter Mailserver in CI nötig.
+
+## Mitglieder-Einladung (neu)
+
+Ersetzt den bisherigen Ablauf, bei dem der Admin selbst ein Passwort
+für eine andere Person festlegen und ihr dann außerhalb der App
+mitteilen musste. Jetzt gilt für das Hochstufen eines Profils (ohne
+Login) zu einem eigenen Vollmitglied-Login dasselbe Muster wie beim
+Passwort-Reset:
+
+1. Admin gibt auf „Familienmitglieder“ nur die E-Mail-Adresse der
+   Person ein (`member_invite_form.php` → `MemberController::invite()`).
+2. Die eingeladene Person bekommt einen Link (`public/
+   accept_invite.php`, 7 Tage gültig) und legt dort ihr **eigenes**
+   Passwort fest (`AuthController::acceptInvite()`) – kein
+   Passwort-Teilen außerhalb der App mehr nötig. Anders als beim
+   Passwort-Reset wird sie danach direkt eingeloggt, ohne sich separat
+   anmelden zu müssen.
+
+Technisch identisch zum Passwort-Reset-Flow: eigene Tabelle
+`member_invites`, gespeichert wird nur der SHA-256-Hash des Tokens, der
+Link wird aus `APP_PUBLIC_URL` gebaut (ohne diese Konfiguration gibt es
+stattdessen den rohen Code zum manuellen Eintragen), eine erneute
+Einladung invalidiert die vorherige.
+
+Für bereits bestehende Installationen: Migration
+`database/migrations/010_member_invites.sql` einmalig ausführen.
