@@ -1,0 +1,21 @@
+{
+    "name": "familienkalender/backend",
+    "description": "Familienkalender SaaS – reines PHP/MySQL-Backend (kein Framework)",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.1",
+        "ext-pdo": "*",
+        "ext-json": "*"
+    },
+    "suggest": {
+        "minishlink/web-push": "Für den echten Web-Push-Versand (VAPID) statt eines Platzhalters, siehe Konzept Abschnitt 8.",
+        "rlanvin/php-rrule": "Für die Berechnung wiederkehrender Termine aus recurrence_rule (RRULE), siehe Konzept Abschnitt 4/6.",
+        "johngrogg/ics-parser": "Zum Parsen importierter/gestreamter ICS-Dateien, siehe Konzept Abschnitt 2.7."
+    },
+    "autoload": {
+        "psr-4": {
+            "Familienkalender\\": "src/"
+        }
+    }
+}

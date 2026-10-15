@@ -1,0 +1,8 @@
+RewriteEngine On
+
+# Nur /api/... existiert nicht als echte Datei (z.B. /api/events/5) und wird
+# daher intern zum API-Frontcontroller umgeleitet. Alle Client-Seiten
+# (login.php, calendar.php, ...) sind echte Dateien und werden von Apache
+# ganz normal direkt ausgeliefert - hier greift KEINE Rewrite-Regel.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^api/(.*)$ api.php [QSA,L]
