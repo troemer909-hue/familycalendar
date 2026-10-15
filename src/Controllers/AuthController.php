@@ -7,6 +7,7 @@ namespace Familienkalender\Controllers;
 use Familienkalender\Core\Database;
 use Familienkalender\Core\Env;
 use Familienkalender\Core\Mailer;
+use Familienkalender\Core\RateLimiter;
 use Familienkalender\Core\Request;
 use Familienkalender\Core\Response;
 use Familienkalender\Core\Token;
@@ -100,6 +101,11 @@ final class AuthController
     {
         $email = trim((string) $request->input('email', ''));
         $password = (string) $request->input('password', '');
+        $ip = RateLimiter::clientIp();
+
+        if (RateLimiter::tooManyLoginAttempts($email, $ip)) {
+            Response::error('Zu viele Anmeldeversuche. Bitte warte ein paar Minuten und versuche es erneut.', 429);
+        }
 
         $db = Database::connection();
         $stmt = $db->prepare('SELECT id, password_hash FROM users WHERE email = :email');
@@ -109,8 +115,11 @@ final class AuthController
         if (!$user || !password_verify($password, $user['password_hash'])) {
             // Bewusst gleiche Fehlermeldung für "unbekannt" und "falsches Passwort"
             // (kein User-Enumeration-Leak).
+            RateLimiter::recordFailedLogin($email, $ip);
             Response::error('E-Mail oder Passwort ist falsch.', 401);
         }
+
+        RateLimiter::clearFailedLogins($email);
 
         $token = Token::issue([
             'user_id' => (int) $user['id'],

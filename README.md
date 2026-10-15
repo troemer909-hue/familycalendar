@@ -311,3 +311,31 @@ Zwei bewusste Sicherheitsentscheidungen:
 
 Für bereits bestehende Installationen: Migration
 `database/migrations/007_password_resets.sql` einmalig ausführen.
+
+## Rate-Limiting beim Login (neu)
+
+`AuthController::login()` (`src/Core/RateLimiter.php`) begrenzt
+fehlgeschlagene Login-Versuche über zwei unabhängige Grenzen, jeweils in
+einem 15-Minuten-Fenster:
+
+- **Max. 5 Fehlversuche pro E-Mail-Adresse** – verhindert Brute-Force
+  gegen EIN Konto, egal von wie vielen IPs aus.
+- **Max. 20 Fehlversuche pro IP-Adresse** – verhindert schnelles
+  Durchprobieren vieler E-Mail-Adressen von einer Quelle aus
+  (Enumeration/Credential-Spraying).
+
+Wird eine Grenze erreicht, antwortet `/api/auth/login` mit `HTTP 429`
+(derselbe generische Fehlertext wie bei falschem Passwort, kein
+zusätzlicher Enumeration-Leak). Ein erfolgreicher Login löscht die
+eigenen Fehlversuche sofort wieder. Bewusst datenbankbasiert statt z.B.
+Redis/APCu, damit kein zusätzlicher Dienst nötig ist; die IP wird aus
+`REMOTE_ADDR` gelesen, NICHT aus `X-Forwarded-For` (das sich ohne
+vertrauenswürdigen Reverse-Proxy beliebig fälschen lässt und die
+IP-Grenze sonst wirkungslos machen würde) – läuft die App hinter einem
+Load Balancer/Reverse-Proxy, müsste das entsprechend angepasst werden.
+
+Die Tabelle `login_attempts` räumt sich selbst auf (jeder Fehlversuch
+löscht beiläufig alles älter als 1 Tag), kein eigener Cron-Job nötig.
+
+Für bereits bestehende Installationen: Migration
+`database/migrations/008_login_attempts.sql` einmalig ausführen.
