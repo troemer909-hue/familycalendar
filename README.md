@@ -399,3 +399,40 @@ werden) übergeben:
 Kein Token-Refresh/Logout nötig: die Rolle wird bei jedem Request frisch
 aus der DB gelesen (`AuthMiddleware`), die Änderung wirkt also sofort auf
 den nächsten Request des bisherigen Admins. Keine Migration nötig.
+
+## Tests (neu)
+
+PHPUnit ist eine reine Dev-Abhängigkeit (`require-dev` in `composer.json`)
+– ändert nichts an der Produktions-Installation, die weiterhin ganz ohne
+`composer install` lauffähig bleibt (siehe `public/api.php`-Kommentar zum
+Autoloader). Zwei getrennte Suiten:
+
+```
+composer install          # einmalig, Dev-Abhängigkeiten
+composer test              # Unit-Tests - keine Datenbank nötig, läuft überall sofort
+composer test:integration  # Integration-Tests - braucht eine echte MySQL-Testdatenbank
+```
+
+- **`tests/Unit/`**: komplett DB-frei, testet die selbst geschriebene
+  Business-Logik direkt (`IcsParser`, `CsvImporter`, `RRule` – inkl.
+  Regressionstest für den ursprünglichen Monats-Clamping-Bug –, `Token`,
+  `Helpers`-Funktionen). Läuft ohne jede Konfiguration, auch lokal ohne
+  MySQL.
+- **`tests/Integration/`**: startet `public/api.php` echt über den
+  PHP-Built-in-Webserver (`tests/Support/ApiServer.php` – Controller
+  rufen `exit()` über `Response::json()` auf, lassen sich also nicht
+  direkt im selben Prozess testen) und fährt echte HTTP-Requests dagegen
+  (Registrierung/Login/Rate-Limiting, Termine anlegen/ändern/löschen,
+  Mandantentrennung zwischen zwei Familien). Braucht eine MySQL-Datenbank,
+  deren Name auf `_test` endet, plus `DB_HOST`/`DB_USER`/`DB_PASSWORD` und
+  `ALLOW_TEST_DB_WIPE=1` als Umgebungsvariablen – Sicherheitsgurt gegen
+  das versehentliche Leerräumen einer echten Datenbank
+  (`tests/Support/IntegrationDb.php`).
+- Ohne konfigurierte Testdatenbank werden Integration-Tests lokal
+  einfach übersprungen; ist dagegen `CI=1` gesetzt, schlagen sie bewusst
+  **fehl** statt leise zu überspringen – eine kaputte CI-DB-Konfiguration
+  soll nie unbemerkt grün durchlaufen.
+
+GitHub-Actions-Workflow unter `.github/workflows/tests.yml`: startet
+einen MySQL-Service-Container, installiert die Dev-Abhängigkeiten,
+prüft `php -l` über das gesamte Repo und führt beide Suiten aus.
