@@ -42,10 +42,14 @@ Env::load(__DIR__ . '/../.env');
 
 $db = Database::connection();
 $stmt = $db->query(
-    "SELECT r.id AS reminder_id, r.user_id, u.email, e.id AS event_id, e.title, e.location, e.starts_at, e.all_day
+    "SELECT r.id AS reminder_id, r.user_id, u.email, e.id AS event_id, e.title, e.location,
+            e.starts_at, e.all_day, e.scope,
+            COALESCE(p.own_events, 1) AS own_events, COALESCE(p.family_events, 1) AS family_events,
+            COALESCE(p.channel_mail, 1) AS channel_mail, COALESCE(p.channel_push, 1) AS channel_push
      FROM reminders r
      JOIN events e ON e.id = r.event_id
      JOIN users u ON u.id = r.user_id
+     LEFT JOIN notification_preferences p ON p.user_id = r.user_id
      WHERE r.sent = 0
        AND e.starts_at > NOW()
        AND DATE_SUB(e.starts_at, INTERVAL r.remind_before_minutes MINUTE) <= NOW()"
@@ -54,6 +58,20 @@ $stmt = $db->query(
 $dueCount = 0;
 foreach ($stmt->fetchAll() as $row) {
     $dueCount++;
+
+    // Globale Schalter aus den Benachrichtigungseinstellungen (siehe
+    // NotificationPreferenceController): wirken ZUSÄTZLICH zur einzelnen
+    // Erinnerung - ist der Schalter für den Terminbereich aus, bleibt die
+    // Erinnerung unverändert "nicht versendet" stehen und wird erneut
+    // geprüft, sobald der Nutzer den Schalter wieder aktiviert.
+    $scopeAllowed = $row['scope'] === 'family' ? (bool) $row['family_events'] : (bool) $row['own_events'];
+    if (!$scopeAllowed) {
+        echo "[ÜBERSPRUNGEN] Erinnerung #{$row['reminder_id']}: Terminbereich '{$row['scope']}' in den Benachrichtigungseinstellungen deaktiviert.\n";
+        continue;
+    }
+
+    $channelMail = (bool) $row['channel_mail'];
+    $channelPush = (bool) $row['channel_push'];
 
     $when = $row['all_day']
         ? (new DateTimeImmutable($row['starts_at']))->format('d.m.Y') . ' (ganztägig)'
@@ -65,27 +83,31 @@ foreach ($stmt->fetchAll() as $row) {
     }
     $body = implode("\n", $bodyLines);
 
-    $mailSent = Mailer::send($row['email'], 'Erinnerung: ' . $row['title'], $body);
+    $mailSent = $channelMail ? Mailer::send($row['email'], 'Erinnerung: ' . $row['title'], $body) : false;
 
     $pushAttempts = 0;
-    try {
-        $pushAttempts = PushSender::sendToUser(
-            (int) $row['user_id'],
-            'Erinnerung: ' . $row['title'],
-            $when . (!empty($row['location']) ? ' · ' . $row['location'] : ''),
-            '/event_form.php?id=' . $row['event_id']
-        );
-    } catch (\Throwable $e) {
-        error_log("Push-Erinnerung fehlgeschlagen (reminder #{$row['reminder_id']}): " . $e->getMessage());
+    if ($channelPush) {
+        try {
+            $pushAttempts = PushSender::sendToUser(
+                (int) $row['user_id'],
+                'Erinnerung: ' . $row['title'],
+                $when . (!empty($row['location']) ? ' · ' . $row['location'] : ''),
+                '/event_form.php?id=' . $row['event_id']
+            );
+        } catch (\Throwable $e) {
+            error_log("Push-Erinnerung fehlgeschlagen (reminder #{$row['reminder_id']}): " . $e->getMessage());
+        }
     }
 
-    // "sent" gilt als erledigt, sobald WENIGSTENS ein Kanal (Mail oder
-    // Push) tatsächlich versucht wurde - Einzelfehler pro Gerät sind
-    // bereits in PushSender geloggt, kein Grund für endlose Wiederholung.
-    if ($mailSent || $pushAttempts > 0) {
+    // "sent" gilt als erledigt, sobald WENIGSTENS ein Kanal tatsächlich
+    // versucht wurde ODER beide Kanäle vom Nutzer bewusst deaktiviert sind
+    // (dann gibt es nichts zuzustellen, kein Grund für endlose Wiederholung).
+    // Einzelfehler pro Gerät sind bereits in PushSender geloggt.
+    $bothChannelsOff = !$channelMail && !$channelPush;
+    if ($mailSent || $pushAttempts > 0 || $bothChannelsOff) {
         $db->prepare('UPDATE reminders SET sent = 1 WHERE id = :id')->execute(['id' => $row['reminder_id']]);
         echo "[OK] Erinnerung #{$row['reminder_id']}: Mail=" . ($mailSent ? 'ja' : 'nein')
-            . ", Push-Geräte=" . $pushAttempts . "\n";
+            . ", Push-Geräte=" . $pushAttempts . ($bothChannelsOff ? ' (beide Kanäle deaktiviert)' : '') . "\n";
     } else {
         error_log("Erinnerung #{$row['reminder_id']} konnte über keinen Kanal versendet werden (an {$row['email']}).");
         echo "[FEHLER] Erinnerung #{$row['reminder_id']} konnte nicht versendet werden.\n";
