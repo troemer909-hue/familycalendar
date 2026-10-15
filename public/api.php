@@ -24,6 +24,7 @@ use Familienkalender\Controllers\AuthController;
 use Familienkalender\Controllers\CalendarSourceController;
 use Familienkalender\Controllers\EventController;
 use Familienkalender\Controllers\MemberController;
+use Familienkalender\Controllers\ReminderController;
 use Familienkalender\Core\Env;
 use Familienkalender\Core\Request;
 use Familienkalender\Core\Response;
@@ -70,6 +71,12 @@ $router->get('/api/events/{id}', [$events, 'show'], [$authMiddleware]);
 $router->post('/api/events', [$events, 'create'], [$authMiddleware]);
 $router->put('/api/events/{id}', [$events, 'update'], [$authMiddleware]);
 $router->delete('/api/events/{id}', [$events, 'delete'], [$authMiddleware]);
+
+// -- Erinnerungen (geschützt, persönlich je Login-Nutzer) ---------------
+$reminders = new ReminderController();
+$router->get('/api/events/{id}/reminders', [$reminders, 'index'], [$authMiddleware]);
+$router->post('/api/events/{id}/reminders', [$reminders, 'create'], [$authMiddleware]);
+$router->delete('/api/reminders/{id}', [$reminders, 'destroy'], [$authMiddleware]);
 
 // -- Kalenderquellen: ICS/CSV-Import & ICS-Abos (geschützt) -------------
 $calendarSources = new CalendarSourceController();

@@ -23,6 +23,27 @@ if ($eventId) {
     $event = $res['data'];
 }
 
+// -- Eigene Erinnerungen zu diesem Termin (nur bei bestehenden Terminen) ---
+$reminders = [];
+if ($eventId) {
+    $remindersRes = $client->request('GET', "/api/events/{$eventId}/reminders");
+    handleUnauthorized($remindersRes);
+    $reminders = $remindersRes['ok'] ? $remindersRes['data'] : [];
+}
+
+function formatReminderOffset(int $minutes): string
+{
+    if ($minutes % 1440 === 0) {
+        $days = intdiv($minutes, 1440);
+        return $days === 1 ? '1 Tag vorher' : "{$days} Tage vorher";
+    }
+    if ($minutes % 60 === 0) {
+        $hours = intdiv($minutes, 60);
+        return $hours === 1 ? '1 Stunde vorher' : "{$hours} Stunden vorher";
+    }
+    return "{$minutes} Minuten vorher";
+}
+
 // -- Vorbelegung für "neuer Termin an diesem Tag" --------------------------
 $prefillDate = $_GET['date'] ?? date('Y-m-d');
 
@@ -115,6 +136,45 @@ $selectedParticipants = $event['participant_ids'] ?? [];
         <input type="hidden" name="id" value="<?= (int) $eventId ?>" />
         <input type="hidden" name="back_month" value="<?= h($backMonth) ?>" />
         <button type="submit" class="btn btn-danger">Termin löschen</button>
+      </form>
+
+      <h2 style="font-size:16px;margin-top:28px;">Meine Erinnerungen</h2>
+      <p class="hint-text">Nur für dich persönlich - per E-Mail, unabhängig davon, wer den Termin angelegt hat.</p>
+
+      <?php if (empty($reminders)): ?>
+        <p class="hint-text">Noch keine Erinnerung für diesen Termin eingerichtet.</p>
+      <?php else: ?>
+        <div class="members-list">
+          <?php foreach ($reminders as $r): ?>
+            <div class="member-row">
+              <span class="name"><?= h(formatReminderOffset((int) $r['remind_before_minutes'])) ?></span>
+              <?php if ($r['sent']): ?><span class="badge profile">Bereits versendet</span><?php endif; ?>
+              <form method="post" action="reminder_delete.php" style="margin:0;">
+                <input type="hidden" name="id" value="<?= (int) $r['id'] ?>" />
+                <input type="hidden" name="event_id" value="<?= (int) $eventId ?>" />
+                <input type="hidden" name="back_month" value="<?= h($backMonth) ?>" />
+                <button type="submit" class="btn btn-secondary">Entfernen</button>
+              </form>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+
+      <form method="post" action="reminder_add.php" style="margin-top:12px;">
+        <input type="hidden" name="event_id" value="<?= (int) $eventId ?>" />
+        <input type="hidden" name="back_month" value="<?= h($backMonth) ?>" />
+        <label>Erinnerung hinzufügen</label>
+        <div class="row">
+          <select name="remind_before_minutes">
+            <option value="15">15 Minuten vorher</option>
+            <option value="30" selected>30 Minuten vorher</option>
+            <option value="60">1 Stunde vorher</option>
+            <option value="120">2 Stunden vorher</option>
+            <option value="1440">1 Tag vorher</option>
+            <option value="2880">2 Tage vorher</option>
+          </select>
+          <button type="submit" class="btn btn-secondary">Hinzufügen</button>
+        </div>
       </form>
     <?php endif; ?>
   </div>
