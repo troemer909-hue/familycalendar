@@ -1,3 +1,5 @@
 .env
 vendor/
 *.log
+.phpunit.result.cache
+/.phpunit.cache

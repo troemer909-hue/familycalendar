@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+         failOnWarning="true"
+         failOnDeprecation="false">
+    <!--
+        Zwei getrennte Suiten (vgl. "composer test" / "composer test:integration"):
+        - Unit: reine Logik, keine Datenbank, läuft überall sofort (auch ohne
+          MySQL, z.B. lokal oder in dieser Sandbox).
+        - Integration: schreibt echt gegen eine MySQL-Testdatenbank, siehe
+          tests/Support/IntegrationDb.php - überspringt sich selbst, wenn
+          keine konfiguriert ist, schlägt aber bewusst FEHL statt leise zu
+          überspringen, wenn CI=1 gesetzt ist (siehe README, Abschnitt Tests).
+    -->
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

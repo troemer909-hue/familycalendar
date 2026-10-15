@@ -19,9 +19,22 @@
         "rlanvin/php-rrule": "Für die Berechnung wiederkehrender Termine aus recurrence_rule (RRULE), siehe Konzept Abschnitt 4/6.",
         "johngrogg/ics-parser": "Zum Parsen importierter/gestreamter ICS-Dateien, siehe Konzept Abschnitt 2.7."
     },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5"
+    },
     "autoload": {
         "psr-4": {
             "Familienkalender\\": "src/"
         }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Familienkalender\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit --testsuite Unit",
+        "test:integration": "phpunit --testsuite Integration",
+        "test:all": "phpunit"
     }
 }
