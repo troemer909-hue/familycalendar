@@ -34,6 +34,7 @@ use Familienkalender\Controllers\AdminPlanController;
 use Familienkalender\Controllers\AuthController;
 use Familienkalender\Controllers\CalendarSourceController;
 use Familienkalender\Controllers\EventController;
+use Familienkalender\Controllers\IcsExportController;
 use Familienkalender\Controllers\MemberController;
 use Familienkalender\Controllers\NotificationPreferenceController;
 use Familienkalender\Controllers\PushSubscriptionController;
@@ -114,6 +115,15 @@ $router->post('/api/calendar-sources/import-csv', [$calendarSources, 'importCsv'
 $router->post('/api/calendar-sources/stream', [$calendarSources, 'createStream'], [$authMiddleware]);
 $router->post('/api/calendar-sources/{id}/sync', [$calendarSources, 'sync'], [$authMiddleware]);
 $router->delete('/api/calendar-sources/{id}', [$calendarSources, 'destroy'], [$authMiddleware]);
+
+// -- Outbound-ICS-Export --------------------------------------------------
+$icsExport = new IcsExportController();
+$router->get('/api/ics-export', [$icsExport, 'show'], [$authMiddleware]);
+$router->post('/api/ics-export/token', [$icsExport, 'generate'], [$authMiddleware]);
+$router->delete('/api/ics-export/token', [$icsExport, 'revoke'], [$authMiddleware]);
+// Bewusst OHNE $authMiddleware - der Feed wird über das geheime Token in
+// der URL selbst geschützt (siehe IcsExportController-Klassendoc).
+$router->get('/api/ics/{token}', [$icsExport, 'feed']);
 
 // -- Plattform-Verwaltung (geschützt, nur TenantContext::isPlatformAdmin) --
 $adminPlans = new AdminPlanController();
