@@ -50,6 +50,7 @@ $vapidPublicKey = $pushConfigured ? ($vapidRes['data']['publicKey'] ?? null) : n
 <?php if ($pushConfigured): ?>
 <script>
   const vapidPublicKey = <?= json_encode($vapidPublicKey) ?>;
+  const csrfToken = <?= json_encode(csrfToken()) ?>;
   const statusEl = document.getElementById('push-status');
   const btn = document.getElementById('push-toggle-btn');
 
@@ -111,7 +112,7 @@ $vapidPublicKey = $pushConfigured ? ($vapidRes['data']['publicKey'] ?? null) : n
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ endpoint: endpoint }),
+                body: JSON.stringify({ endpoint: endpoint, csrf_token: csrfToken }),
               }).finally(function () {
                 setButton(false);
               });
@@ -132,6 +133,7 @@ $vapidPublicKey = $pushConfigured ? ($vapidRes['data']['publicKey'] ?? null) : n
             endpoint: json.endpoint,
             keys: json.keys,
             device_info: navigator.userAgent.substring(0, 255),
+            csrf_token: csrfToken,
           };
 
           return fetch('push_subscribe_save.php', {

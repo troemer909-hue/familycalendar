@@ -21,6 +21,7 @@ $error = $_GET['error'] ?? null;
     <?php if ($error): ?><p class="error-box"><?= h($error) ?></p><?php endif; ?>
 
     <form method="post" action="member_upgrade.php">
+      <?= csrfField() ?>
       <input type="hidden" name="id" value="<?= $id ?>" />
       <label>E-Mail</label>
       <input type="email" name="email" required />

@@ -16,6 +16,7 @@ $error = $_GET['error'] ?? null;
       <h1>📅 Familienkalender</h1>
 
       <form method="post" action="login_submit.php">
+        <?= csrfField() ?>
         <label>API-Adresse des Backends</label>
         <input type="text" name="api_base_url" value="<?= h($config['api_base_url']) ?>" placeholder="https://family.eastcon.eu" required />
 

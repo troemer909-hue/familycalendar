@@ -17,6 +17,9 @@ if (!is_array($body)) {
     exit;
 }
 
+requireCsrfJson($body);
+unset($body['csrf_token']);
+
 $client = currentApiClient();
 $res = $client->request('DELETE', '/api/push/subscribe', $body);
 

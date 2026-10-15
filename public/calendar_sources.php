@@ -69,11 +69,13 @@ $statusLabels = [
             <div style="display:flex;gap:8px;">
               <?php if ($s['type'] === 'stream_ics'): ?>
                 <form method="post" action="calendar_source_sync.php" style="margin:0;">
+                  <?= csrfField() ?>
                   <input type="hidden" name="id" value="<?= (int) $s['id'] ?>" />
                   <button type="submit" class="btn btn-secondary">Jetzt synchronisieren</button>
                 </form>
               <?php endif; ?>
               <form method="post" action="calendar_source_delete.php" style="margin:0;">
+                <?= csrfField() ?>
                 <input type="hidden" name="id" value="<?= (int) $s['id'] ?>" />
                 <button type="submit" class="btn btn-danger">Entfernen</button>
               </form>
@@ -85,6 +87,7 @@ $statusLabels = [
 
     <h2 style="font-size:16px;margin-top:28px;">.ics-Datei importieren (einmalig)</h2>
     <form method="post" action="calendar_source_import_ics.php" enctype="multipart/form-data">
+      <?= csrfField() ?>
       <label>Name der Quelle</label>
       <input type="text" name="name" placeholder="z.B. Schulferien 2026" required />
       <label>.ics-Datei</label>
@@ -104,6 +107,7 @@ $statusLabels = [
     <h2 style="font-size:16px;margin-top:28px;">.csv-Datei importieren (einmalig)</h2>
     <p class="hint-text">Spalten: Titel, Beginn, Ende (Pflicht), optional Beschreibung, Ort, Ganztägig.</p>
     <form method="post" action="calendar_source_import_csv.php" enctype="multipart/form-data">
+      <?= csrfField() ?>
       <label>Name der Quelle</label>
       <input type="text" name="name" placeholder="z.B. Trainingsplan Verein" required />
       <label>.csv-Datei</label>
@@ -123,6 +127,7 @@ $statusLabels = [
     <h2 style="font-size:16px;margin-top:28px;">Laufendes ICS-Abo einrichten</h2>
     <p class="hint-text">Für einen ICS-Link, der sich ändert (z.B. Vereins- oder Google-Kalender-Freigabe) - wird automatisch alle X Minuten neu geladen.</p>
     <form method="post" action="calendar_source_stream.php">
+      <?= csrfField() ?>
       <label>Name der Quelle</label>
       <input type="text" name="name" placeholder="z.B. Fußballverein Trainingsplan" required />
       <label>ICS-Adresse (URL)</label>

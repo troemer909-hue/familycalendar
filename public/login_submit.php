@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../src/bootstrap.php';
+requireCsrf();
 
 $apiBaseUrl = trim($_POST['api_base_url'] ?? '');
 $email = trim($_POST['email'] ?? '');
