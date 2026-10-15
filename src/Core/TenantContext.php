@@ -16,13 +16,15 @@ final class TenantContext
     private static ?int $familyId = null;
     private static ?int $familyMemberId = null;
     private static ?string $role = null; // 'admin' | 'member'
+    private static bool $isPlatformAdmin = false;
 
-    public static function set(int $userId, int $familyId, int $familyMemberId, string $role): void
+    public static function set(int $userId, int $familyId, int $familyMemberId, string $role, bool $isPlatformAdmin = false): void
     {
         self::$userId = $userId;
         self::$familyId = $familyId;
         self::$familyMemberId = $familyMemberId;
         self::$role = $role;
+        self::$isPlatformAdmin = $isPlatformAdmin;
     }
 
     public static function userId(): int
@@ -49,6 +51,28 @@ final class TenantContext
     {
         if (!self::isAdmin()) {
             Response::error('Nur der Familienadmin darf das.', 403);
+        }
+    }
+
+    /**
+     * Plattform-weite Administration (Pläne/Billing über alle Familien
+     * hinweg) ist bewusst von der familieninternen Admin-Rolle getrennt:
+     * ein Familienadmin verwaltet nur seine eigene Familie, ein
+     * Plattform-Admin (users.is_platform_admin) kann Pläne und den
+     * Abrechnungsstatus JEDER Familie ändern. Es gibt aktuell keine
+     * Selbstbedienungs-Funktion, um sich selbst zum Plattform-Admin zu
+     * machen - das erste Konto wird einmalig manuell per SQL gesetzt
+     * (siehe README, Abschnitt "Plattform-Verwaltung").
+     */
+    public static function isPlatformAdmin(): bool
+    {
+        return self::$isPlatformAdmin;
+    }
+
+    public static function requirePlatformAdmin(): void
+    {
+        if (!self::isPlatformAdmin()) {
+            Response::error('Nur für Plattform-Administratoren.', 403);
         }
     }
 }

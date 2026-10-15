@@ -339,3 +339,41 @@ löscht beiläufig alles älter als 1 Tag), kein eigener Cron-Job nötig.
 
 Für bereits bestehende Installationen: Migration
 `database/migrations/008_login_attempts.sql` einmalig ausführen.
+
+## Plattform-Verwaltung: Pläne & Billing (neu)
+
+Zweite, von der familieninternen Admin-Rolle (`family_members.role`)
+bewusst getrennte Berechtigungsebene: **Plattform-Admins**
+(`users.is_platform_admin`) können über „Plattform-Verwaltung“ im
+Kalender-Sidebar ALLE Familien verwalten, nicht nur ihre eigene –
+analog zu einem separaten Platform-Operator-Modus statt einer
+normalen Tenant-Rolle (keine Mischung mit Familienadmin-Rechten).
+
+- **`admin_plans.php`** (`AdminPlanController`): SaaS-Pakete (Tabelle
+  `plans`) anlegen/bearbeiten/löschen – Code, Name, Preis/Monat, max.
+  Mitglieder, max. Kalender-Abos. Löschen schlägt bewusst fehl
+  (SQLSTATE 23000 → `409`), solange noch Familien diesen Plan nutzen.
+- **`admin_families.php`** (`AdminFamilyController`): jede Familie
+  einem Plan zuordnen und ihren Abrechnungsstatus setzen
+  (`trial`/`active`/`suspended`/`cancelled`), mit Status-Filter. Reine
+  Status-Pflege – **keine Zahlungsabwicklung**, die bleibt bewusst
+  außerhalb des MVP (siehe `schema.sql`-Kommentar „Familien starten
+  manuell im Trial“).
+
+Durchsetzung passiert ausschließlich serverseitig
+(`TenantContext::requirePlatformAdmin()`, frisch bei jedem Request aus
+der DB gelesen in `AuthMiddleware` – keine zwischengespeicherte Rolle im
+Token). Die Admin-Seiten sind für alle eingeloggten Nutzer verlinkt;
+ohne Berechtigung landet man nach einem Klick einfach mit einer
+verständlichen Meldung zurück auf dem Kalender (`handleForbidden()`).
+
+Es gibt bewusst KEINE Selbstbedienungs-Funktion, um sich selbst zum
+Plattform-Admin zu machen. Das allererste Plattform-Admin-Konto wird
+einmalig manuell per SQL gesetzt:
+
+```sql
+UPDATE users SET is_platform_admin = 1 WHERE email = 'du@example.com';
+```
+
+Keine Migration nötig – `users.is_platform_admin` existiert bereits seit
+dem ursprünglichen Schema, war bisher nur ungenutzt.

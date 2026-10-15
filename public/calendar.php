@@ -2,6 +2,8 @@
 require_once __DIR__ . '/../src/bootstrap.php';
 requireLogin();
 
+$redirectError = $_GET['error'] ?? null;
+
 $client = currentApiClient();
 
 $membersRes = $client->request('GET', '/api/members');
@@ -110,6 +112,9 @@ $weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
       <a href="notification_settings.php" class="btn btn-secondary btn-block">Benachrichtigungseinstellungen</a>
     </p>
     <p>
+      <a href="admin_families.php" class="btn btn-secondary btn-block">Plattform-Verwaltung</a>
+    </p>
+    <p>
       <a href="logout.php" class="hint-text">Abmelden</a>
     </p>
   </aside>
@@ -125,6 +130,7 @@ $weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
       <a class="btn btn-primary" href="event_form.php?date=<?= h($today) ?>&back_month=<?= h($monthParam) ?>">+ Neuer Termin</a>
     </div>
 
+    <?php if ($redirectError): ?><p class="error-box"><?= h($redirectError) ?></p><?php endif; ?>
     <?php if (!empty($membersError)): ?><p class="error-box"><?= h($membersError) ?></p><?php endif; ?>
     <?php if ($eventsError): ?><p class="error-box"><?= h($eventsError) ?></p><?php endif; ?>
 

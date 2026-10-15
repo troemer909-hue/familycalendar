@@ -29,6 +29,8 @@ if (is_file($composerAutoload)) {
     require $composerAutoload;
 }
 
+use Familienkalender\Controllers\AdminFamilyController;
+use Familienkalender\Controllers\AdminPlanController;
 use Familienkalender\Controllers\AuthController;
 use Familienkalender\Controllers\CalendarSourceController;
 use Familienkalender\Controllers\EventController;
@@ -111,6 +113,18 @@ $router->post('/api/calendar-sources/import-csv', [$calendarSources, 'importCsv'
 $router->post('/api/calendar-sources/stream', [$calendarSources, 'createStream'], [$authMiddleware]);
 $router->post('/api/calendar-sources/{id}/sync', [$calendarSources, 'sync'], [$authMiddleware]);
 $router->delete('/api/calendar-sources/{id}', [$calendarSources, 'destroy'], [$authMiddleware]);
+
+// -- Plattform-Verwaltung (geschützt, nur TenantContext::isPlatformAdmin) --
+$adminPlans = new AdminPlanController();
+$router->get('/api/admin/plans', [$adminPlans, 'index'], [$authMiddleware]);
+$router->get('/api/admin/plans/{id}', [$adminPlans, 'show'], [$authMiddleware]);
+$router->post('/api/admin/plans', [$adminPlans, 'create'], [$authMiddleware]);
+$router->put('/api/admin/plans/{id}', [$adminPlans, 'update'], [$authMiddleware]);
+$router->delete('/api/admin/plans/{id}', [$adminPlans, 'destroy'], [$authMiddleware]);
+
+$adminFamilies = new AdminFamilyController();
+$router->get('/api/admin/families', [$adminFamilies, 'index'], [$authMiddleware]);
+$router->put('/api/admin/families/{id}', [$adminFamilies, 'update'], [$authMiddleware]);
 
 // -- Healthcheck ------------------------------------------------------------
 $router->get('/api/health', static function (): void {
