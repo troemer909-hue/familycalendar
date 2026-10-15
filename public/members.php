@@ -7,6 +7,7 @@ $membersRes = $client->request('GET', '/api/members');
 handleUnauthorized($membersRes);
 $members = $membersRes['ok'] ? $membersRes['data'] : [];
 $error = $_GET['error'] ?? null;
+$notice = $_GET['notice'] ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -20,6 +21,7 @@ $error = $_GET['error'] ?? null;
   <div class="form-card" style="max-width:560px;">
     <h1>Familienmitglieder</h1>
 
+    <?php if ($notice): ?><p class="success-box"><?= h($notice) ?></p><?php endif; ?>
     <?php if ($error): ?><p class="error-box"><?= h($error) ?></p><?php endif; ?>
 
     <div class="members-list">
@@ -42,6 +44,7 @@ $error = $_GET['error'] ?? null;
               <input type="hidden" name="id" value="<?= (int) $m['id'] ?>" />
               <button type="submit" class="btn btn-secondary">Login entziehen</button>
             </form>
+            <a class="btn btn-secondary" href="member_transfer_admin_confirm.php?id=<?= (int) $m['id'] ?>">Admin-Rolle übergeben</a>
           <?php endif; ?>
         </div>
       <?php endforeach; ?>

@@ -78,6 +78,7 @@ $router->get('/api/members', [$members, 'index'], [$authMiddleware]);
 $router->post('/api/members', [$members, 'createProfile'], [$authMiddleware]);
 $router->post('/api/members/{id}/upgrade', [$members, 'upgrade'], [$authMiddleware]);
 $router->delete('/api/members/{id}/login', [$members, 'downgrade'], [$authMiddleware]);
+$router->post('/api/members/{id}/transfer-admin', [$members, 'transferAdmin'], [$authMiddleware]);
 
 // -- Termine (geschützt) --------------------------------------------------
 $events = new EventController();

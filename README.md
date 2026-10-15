@@ -377,3 +377,25 @@ UPDATE users SET is_platform_admin = 1 WHERE email = 'du@example.com';
 
 Keine Migration nötig – `users.is_platform_admin` existiert bereits seit
 dem ursprünglichen Schema, war bisher nur ungenutzt.
+
+## Admin-Rollen-Übertragung (neu)
+
+Es gibt pro Familie bewusst GENAU EINEN Familienadmin
+(`family_members.role = 'admin'`, nicht zu verwechseln mit den
+Plattform-Admins oben). Auf „Familienmitglieder“ (`members.php`) kann
+der aktuelle Admin die Rolle an ein anderes Vollmitglied (muss bereits
+ein eigenes Login haben – ein reines Profil ohne Login kann nicht Admin
+werden) übergeben:
+
+1. „Admin-Rolle übergeben“ führt zu einer Bestätigungsseite
+   (`member_transfer_admin_confirm.php`), die erklärt, was passiert – es
+   gibt bewusst KEINEN JavaScript-`confirm()`-Dialog, passend zur
+   JS-freien Architektur des restlichen Clients.
+2. Nach Bestätigung (`MemberController::transferAdmin()`,
+   `POST /api/members/{id}/transfer-admin`) wird das Ziel-Mitglied zum
+   Admin, der bisherige Admin zu einem normalen Mitglied – in einer
+   Transaktion.
+
+Kein Token-Refresh/Logout nötig: die Rolle wird bei jedem Request frisch
+aus der DB gelesen (`AuthMiddleware`), die Änderung wirkt also sofort auf
+den nächsten Request des bisherigen Admins. Keine Migration nötig.
