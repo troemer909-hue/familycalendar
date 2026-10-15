@@ -29,12 +29,20 @@ spl_autoload_register(static function (string $class): void {
 use Familienkalender\Core\Database;
 use Familienkalender\Core\Env;
 use Familienkalender\Core\Mailer;
+use Familienkalender\Core\PushSender;
+
+// Composer-Autoloader NUR für Push (siehe PushSender::isConfigured()) -
+// fehlt vendor/, laufen E-Mail-Erinnerungen unverändert weiter.
+$composerAutoload = __DIR__ . '/../vendor/autoload.php';
+if (is_file($composerAutoload)) {
+    require $composerAutoload;
+}
 
 Env::load(__DIR__ . '/../.env');
 
 $db = Database::connection();
 $stmt = $db->query(
-    "SELECT r.id AS reminder_id, u.email, e.title, e.location, e.starts_at, e.all_day
+    "SELECT r.id AS reminder_id, r.user_id, u.email, e.id AS event_id, e.title, e.location, e.starts_at, e.all_day
      FROM reminders r
      JOIN events e ON e.id = r.event_id
      JOIN users u ON u.id = r.user_id
@@ -57,13 +65,29 @@ foreach ($stmt->fetchAll() as $row) {
     }
     $body = implode("\n", $bodyLines);
 
-    $sent = Mailer::send($row['email'], 'Erinnerung: ' . $row['title'], $body);
+    $mailSent = Mailer::send($row['email'], 'Erinnerung: ' . $row['title'], $body);
 
-    if ($sent) {
+    $pushAttempts = 0;
+    try {
+        $pushAttempts = PushSender::sendToUser(
+            (int) $row['user_id'],
+            'Erinnerung: ' . $row['title'],
+            $when . (!empty($row['location']) ? ' · ' . $row['location'] : ''),
+            '/event_form.php?id=' . $row['event_id']
+        );
+    } catch (\Throwable $e) {
+        error_log("Push-Erinnerung fehlgeschlagen (reminder #{$row['reminder_id']}): " . $e->getMessage());
+    }
+
+    // "sent" gilt als erledigt, sobald WENIGSTENS ein Kanal (Mail oder
+    // Push) tatsächlich versucht wurde - Einzelfehler pro Gerät sind
+    // bereits in PushSender geloggt, kein Grund für endlose Wiederholung.
+    if ($mailSent || $pushAttempts > 0) {
         $db->prepare('UPDATE reminders SET sent = 1 WHERE id = :id')->execute(['id' => $row['reminder_id']]);
-        echo "[OK] Erinnerung #{$row['reminder_id']} an {$row['email']} versendet.\n";
+        echo "[OK] Erinnerung #{$row['reminder_id']}: Mail=" . ($mailSent ? 'ja' : 'nein')
+            . ", Push-Geräte=" . $pushAttempts . "\n";
     } else {
-        error_log("Erinnerung #{$row['reminder_id']} konnte nicht per Mail versendet werden (an {$row['email']}).");
+        error_log("Erinnerung #{$row['reminder_id']} konnte über keinen Kanal versendet werden (an {$row['email']}).");
         echo "[FEHLER] Erinnerung #{$row['reminder_id']} konnte nicht versendet werden.\n";
     }
 }

@@ -20,10 +20,20 @@ spl_autoload_register(static function (string $class): void {
     }
 });
 
+// Composer-Autoloader NUR für optionale Zusatzfunktionen (aktuell: Push-
+// Benachrichtigungen über minishlink/web-push) - fehlt vendor/, läuft die
+// App unverändert weiter, die betroffenen Funktionen sind dann einfach
+// nicht verfügbar (siehe PushSender::isConfigured()).
+$composerAutoload = dirname(__DIR__) . '/vendor/autoload.php';
+if (is_file($composerAutoload)) {
+    require $composerAutoload;
+}
+
 use Familienkalender\Controllers\AuthController;
 use Familienkalender\Controllers\CalendarSourceController;
 use Familienkalender\Controllers\EventController;
 use Familienkalender\Controllers\MemberController;
+use Familienkalender\Controllers\PushSubscriptionController;
 use Familienkalender\Controllers\ReminderController;
 use Familienkalender\Core\Env;
 use Familienkalender\Core\Request;
@@ -78,6 +88,12 @@ $reminders = new ReminderController();
 $router->get('/api/events/{id}/reminders', [$reminders, 'index'], [$authMiddleware]);
 $router->post('/api/events/{id}/reminders', [$reminders, 'create'], [$authMiddleware]);
 $router->delete('/api/reminders/{id}', [$reminders, 'destroy'], [$authMiddleware]);
+
+// -- Push-Benachrichtigungen (geschützt, optional - siehe PushSender) ---
+$push = new PushSubscriptionController();
+$router->get('/api/push/vapid-public-key', [$push, 'vapidPublicKey'], [$authMiddleware]);
+$router->post('/api/push/subscribe', [$push, 'subscribe'], [$authMiddleware]);
+$router->delete('/api/push/subscribe', [$push, 'unsubscribe'], [$authMiddleware]);
 
 // -- Kalenderquellen: ICS/CSV-Import & ICS-Abos (geschützt) -------------
 $calendarSources = new CalendarSourceController();
