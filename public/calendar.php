@@ -112,6 +112,9 @@ $weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
       <a href="notification_settings.php" class="btn btn-secondary btn-block">Benachrichtigungseinstellungen</a>
     </p>
     <p>
+      <a href="ics_export.php" class="btn btn-secondary btn-block">Kalender-Abo (ICS-Export)</a>
+    </p>
+    <p>
       <a href="admin_families.php" class="btn btn-secondary btn-block">Plattform-Verwaltung</a>
     </p>
     <p>
