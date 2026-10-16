@@ -7,10 +7,10 @@ $client = currentApiClient();
 
 $eventId = (int) ($_POST['event_id'] ?? 0);
 $minutes = (int) ($_POST['remind_before_minutes'] ?? 30);
-$backMonth = $_POST['back_month'] ?? date('Y-m');
+$back = sanitizeCalendarBack($_POST['back'] ?? '');
 
-$redirectBack = function (string $message) use ($eventId, $backMonth): void {
-    header('Location: event_form.php?id=' . $eventId . '&back_month=' . urlencode($backMonth) . '&error=' . urlencode($message));
+$redirectBack = function (string $message) use ($eventId, $back): void {
+    header('Location: event_form.php?id=' . $eventId . '&back=' . urlencode($back) . '&error=' . urlencode($message));
     exit;
 };
 
@@ -25,5 +25,5 @@ if (!$res['ok']) {
     $redirectBack($res['data']['error'] ?? 'Erinnerung konnte nicht angelegt werden.');
 }
 
-header('Location: event_form.php?id=' . $eventId . '&back_month=' . urlencode($backMonth));
+header('Location: event_form.php?id=' . $eventId . '&back=' . urlencode($back));
 exit;
