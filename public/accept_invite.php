@@ -10,6 +10,7 @@ $token = $_GET['token'] ?? '';
   <meta charset="UTF-8" />
   <title>Familienkalender – Einladung annehmen</title>
   <link rel="stylesheet" href="styles.css" />
+<?= pwaHeadTags() ?>
 </head>
 <body>
   <div class="login-wrap">

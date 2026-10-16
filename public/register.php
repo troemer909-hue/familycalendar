@@ -9,6 +9,7 @@ $error = $_GET['error'] ?? null;
   <meta charset="UTF-8" />
   <title>Familienkalender – Registrierung</title>
   <link rel="stylesheet" href="styles.css" />
+<?= pwaHeadTags() ?>
 </head>
 <body>
   <div class="login-wrap">

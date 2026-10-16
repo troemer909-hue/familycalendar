@@ -15,6 +15,7 @@ $vapidPublicKey = $pushConfigured ? ($vapidRes['data']['publicKey'] ?? null) : n
   <meta charset="UTF-8" />
   <title>Push-Benachrichtigungen</title>
   <link rel="stylesheet" href="styles.css" />
+<?= pwaHeadTags() ?>
 </head>
 <body>
 <div class="main-area">

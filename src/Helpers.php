@@ -8,6 +8,25 @@ function h(?string $value): string
 }
 
 /**
+ * Gemeinsame <head>-Tags, damit die App auf dem Smartphone installierbar
+ * ist (Homescreen-Icon, Standalone-Fenster ohne Browser-UI) - auf jeder
+ * Seite eingebunden, da der Browser das Manifest unabhängig vom
+ * Einstiegspunkt lesen muss. Der eigentliche Installations-/Offline-
+ * Mechanismus steckt in public/manifest.json und public/sw.js.
+ */
+function pwaHeadTags(): string
+{
+    return <<<'HTML'
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#203650" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Family-Kalender" />
+HTML;
+}
+
+/**
  * CSRF-Schutz für die POST-Formulare dieses (session-basierten) Clients.
  * Ein Token pro Session reicht aus - es wird bei der ersten Verwendung
  * erzeugt und bleibt über die gesamte Session gültig (auch über
