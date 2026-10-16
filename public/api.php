@@ -39,6 +39,7 @@ use Familienkalender\Controllers\MemberController;
 use Familienkalender\Controllers\NotificationPreferenceController;
 use Familienkalender\Controllers\PushSubscriptionController;
 use Familienkalender\Controllers\ReminderController;
+use Familienkalender\Controllers\SelfUpdateController;
 use Familienkalender\Core\Env;
 use Familienkalender\Core\Request;
 use Familienkalender\Core\Response;
@@ -137,6 +138,11 @@ $router->delete('/api/admin/plans/{id}', [$adminPlans, 'destroy'], [$authMiddlew
 $adminFamilies = new AdminFamilyController();
 $router->get('/api/admin/families', [$adminFamilies, 'index'], [$authMiddleware]);
 $router->put('/api/admin/families/{id}', [$adminFamilies, 'update'], [$authMiddleware]);
+
+// -- Selbst-Update (geschützt, nur TenantContext::isPlatformAdmin) --------
+$selfUpdate = new SelfUpdateController();
+$router->get('/api/self-update/status', [$selfUpdate, 'status'], [$authMiddleware]);
+$router->post('/api/self-update/run', [$selfUpdate, 'run'], [$authMiddleware]);
 
 // -- Healthcheck ------------------------------------------------------------
 $router->get('/api/health', static function (): void {

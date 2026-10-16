@@ -230,4 +230,40 @@ CREATE TABLE IF NOT EXISTS member_invites (
   UNIQUE KEY uniq_token_hash (token_hash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ---------------------------------------------------------------------
+-- Selbst-Update (siehe SelfUpdateController / README Abschnitt
+-- "Selbst-Update")
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  migration VARCHAR(255) PRIMARY KEY,
+  applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Bei einer FRISCHEN Installation per schema.sql sind alle bisherigen
+-- Migrationsdateien bereits enthalten - sofort als "angewendet" markieren,
+-- damit der Runner sie nicht fälschlich erneut ausführen will.
+INSERT IGNORE INTO schema_migrations (migration) VALUES
+  ('002_calendar_source_sync.sql'),
+  ('003_reminders_unique.sql'),
+  ('004_recurring_events.sql'),
+  ('005_push_subscriptions_unique.sql'),
+  ('006_notification_preferences_channels.sql'),
+  ('007_password_resets.sql'),
+  ('008_login_attempts.sql'),
+  ('009_ics_export_token.sql'),
+  ('010_member_invites.sql'),
+  ('011_self_update.sql');
+
+CREATE TABLE IF NOT EXISTS self_update_runs (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  triggered_by_user_id INT NOT NULL,
+  from_commit VARCHAR(40) NULL,
+  to_commit VARCHAR(40) NULL,
+  migrations_applied TEXT NULL,
+  success TINYINT(1) NOT NULL DEFAULT 0,
+  message TEXT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (triggered_by_user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;
