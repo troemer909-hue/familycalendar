@@ -10,6 +10,7 @@ $sent = isset($_GET['sent']);
   <meta charset="UTF-8" />
   <title>Familienkalender – Passwort vergessen</title>
   <link rel="stylesheet" href="styles.css" />
+<?= pwaHeadTags() ?>
 </head>
 <body>
   <div class="login-wrap">

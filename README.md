@@ -553,6 +553,32 @@ sie legt `schema_migrations`/`self_update_runs` an UND markiert alle
 bis dahin vorhandenen Migrationen (002-011) als bereits angewendet,
 damit der Runner sie nicht fälschlich ein zweites Mal ausführt.
 
+## Installierbare PWA (neu)
+
+Family-Kalender lässt sich auf dem Smartphone "installieren" (Icon auf
+dem Homescreen, eigenes Fenster ohne Browser-Adressleiste) - dieselbe
+App, nur ohne Umweg über den Browser.
+
+- **`public/manifest.json`**: Name, Icons (`public/icons/`, aus dem
+  App-Icon-SVG des Logo-Pakets exportiert), Theme-Farbe, `start_url`
+  (`/calendar.php`) und `display: standalone`.
+- **`public/sw.js`** (bereits für Web Push vorhanden, siehe
+  "Push-Benachrichtigungen") cached zusätzlich das statische
+  "Shell"-Material (`styles.css`, Icons, Manifest) für einen schnelleren
+  Seitenaufbau. Die PHP-Seiten selbst bleiben bewusst UNcached - sie sind
+  session-/mandantenabhängig (eigene Termine, CSRF-Token), ein
+  gecachtes HTML-Fragment könnte sonst veraltete oder falsche Daten
+  eines anderen Logins zeigen. Echte Offline-Nutzung (Kalender ohne
+  Verbindung ansehen) ist damit bewusst NICHT das Ziel - das würde
+  clientseitige Datenspeicherung (IndexedDB) brauchen und stünde im
+  Widerspruch zum "kein JavaScript außer für Push"-Prinzip dieser App.
+- **`pwaHeadTags()`** (`src/Helpers.php`) bindet Manifest-Link,
+  Theme-Color, Viewport- und `apple-touch-icon`-Meta-Tags einheitlich in
+  den `<head>` jeder Seite ein.
+- "Installieren" bietet der Browser selbst an (z. B. über das
+  Adressleisten-Icon in Chrome/Edge, "Zum Home-Bildschirm" im
+  iOS-Safari-Teilen-Menü) - kein eigener Button in der App nötig.
+
 ## Wochen- und Tagesansicht (neu)
 
 Zusätzlich zur Monatsübersicht gibt es jetzt eine Wochen- und eine

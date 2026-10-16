@@ -144,6 +144,7 @@ if ($view === 'day') {
   <meta charset="UTF-8" />
   <title>Familienkalender</title>
   <link rel="stylesheet" href="styles.css" />
+<?= pwaHeadTags() ?>
 </head>
 <body>
 <div class="app-layout">
