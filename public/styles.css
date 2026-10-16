@@ -74,6 +74,10 @@ button, .btn {
 .month-nav .btn { width: 34px; height: 34px; text-align: center; padding: 6px 0; background: #fff; border: 1px solid #d7dae1; }
 #current-month-label { min-width: 160px; margin: 0; font-size: 18px; }
 
+.view-switch { display: flex; gap: 3px; background: #f0f1f4; border-radius: 8px; padding: 3px; }
+.view-switch a { padding: 6px 14px; font-size: 13px; font-weight: 600; border-radius: 6px; color: #64748b; text-decoration: none; }
+.view-switch a.active { background: #fff; color: #1f2430; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
 .calendar-weekday { font-size: 12px; font-weight: 700; color: #94a3b8; text-align: center; padding-bottom: 4px; }
 .calendar-day {
@@ -89,6 +93,29 @@ button, .btn {
 
 .event-chip { display: block; font-size: 11px; padding: 2px 6px; border-radius: 5px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .event-chip.family-event { background: #1f2430; }
+
+/* Wochenansicht: dieselbe 7-Spalten-Grid wie der Monat, nur eine Zeile
+   mit mehr Höhe (mehr Termine gleichzeitig sichtbar, siehe Anlass für
+   dieses Feature) und Wochentags-Label statt reiner Zahl im Zellkopf. */
+.calendar-grid.view-week .calendar-day { min-height: 420px; }
+.calendar-grid.view-week .day-header { flex-wrap: wrap; }
+.weekday-label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; flex-basis: 100%; }
+
+/* Tagesansicht: Agenda-Liste statt Grid - pro Termin Uhrzeit + Titel. */
+.day-agenda { display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
+.day-agenda-empty { color: #94a3b8; font-size: 14px; padding: 24px 0; }
+.day-event {
+  display: flex; align-items: flex-start; gap: 12px; background: #fff;
+  border: 1px solid #edeef2; border-radius: 10px; padding: 12px 16px;
+  text-decoration: none; color: inherit;
+}
+.day-event:hover { border-color: #d7dae1; }
+.day-event .dot { margin-top: 5px; }
+.day-event-time { font-size: 12px; font-weight: 700; color: #64748b; min-width: 100px; white-space: nowrap; }
+.day-event-time .sep { opacity: .5; margin: 0 2px; }
+.day-event-body { display: flex; flex-direction: column; gap: 2px; }
+.day-event-title { font-weight: 600; font-size: 14px; }
+.day-event-location { font-size: 12px; color: #94a3b8; }
 
 /* -------------------------- Formularseiten -------------------------- */
 .form-card { background: #fff; padding: 28px 32px; border-radius: 14px; max-width: 480px; }

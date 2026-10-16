@@ -8,7 +8,7 @@ $membersRes = $client->request('GET', '/api/members');
 handleUnauthorized($membersRes);
 $members = $membersRes['ok'] ? $membersRes['data'] : [];
 
-$backMonth = $_GET['back_month'] ?? date('Y-m');
+$back = sanitizeCalendarBack($_GET['back'] ?? '');
 $eventId = isset($_GET['id']) ? (int) $_GET['id'] : null;
 $error = $_GET['error'] ?? null;
 
@@ -17,7 +17,7 @@ if ($eventId) {
     $res = $client->request('GET', "/api/events/{$eventId}");
     handleUnauthorized($res);
     if (!$res['ok']) {
-        header('Location: calendar.php?month=' . urlencode($backMonth) . '&error=' . urlencode($res['data']['error'] ?? 'Termin nicht gefunden.'));
+        header('Location: calendar.php?' . $back . '&error=' . urlencode($res['data']['error'] ?? 'Termin nicht gefunden.'));
         exit;
     }
     $event = $res['data'];
@@ -94,7 +94,7 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
     <form method="post" action="event_save.php">
       <?= csrfField() ?>
       <input type="hidden" name="id" value="<?= $eventId ? (int) $eventId : '' ?>" />
-      <input type="hidden" name="back_month" value="<?= h($backMonth) ?>" />
+      <input type="hidden" name="back" value="<?= h($back) ?>" />
 
       <label>Titel *</label>
       <input type="text" name="title" value="<?= h($titleValue) ?>" required />
@@ -167,7 +167,7 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
 
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">Speichern</button>
-        <a href="calendar.php?month=<?= h($backMonth) ?>" class="btn btn-secondary">Abbrechen</a>
+        <a href="calendar.php?<?= h($back) ?>" class="btn btn-secondary">Abbrechen</a>
         <div class="spacer"></div>
       </div>
     </form>
@@ -177,7 +177,7 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
         <form method="post" action="event_delete.php" style="margin:0;">
           <?= csrfField() ?>
           <input type="hidden" name="id" value="<?= (int) $eventId ?>" />
-          <input type="hidden" name="back_month" value="<?= h($backMonth) ?>" />
+          <input type="hidden" name="back" value="<?= h($back) ?>" />
           <button type="submit" class="btn <?= $isSeriesMaster ? 'btn-secondary' : 'btn-danger' ?>">
             <?= $isSeriesMaster ? 'Nur diesen Termin löschen' : 'Termin löschen' ?>
           </button>
@@ -186,7 +186,7 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
           <form method="post" action="event_delete_series.php" style="margin:0;">
             <?= csrfField() ?>
             <input type="hidden" name="id" value="<?= (int) $eventId ?>" />
-            <input type="hidden" name="back_month" value="<?= h($backMonth) ?>" />
+            <input type="hidden" name="back" value="<?= h($back) ?>" />
             <button type="submit" class="btn btn-danger">Ganze Serie löschen</button>
           </form>
         <?php endif; ?>
@@ -211,7 +211,7 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
                 <?= csrfField() ?>
                 <input type="hidden" name="id" value="<?= (int) $r['id'] ?>" />
                 <input type="hidden" name="event_id" value="<?= (int) $eventId ?>" />
-                <input type="hidden" name="back_month" value="<?= h($backMonth) ?>" />
+                <input type="hidden" name="back" value="<?= h($back) ?>" />
                 <button type="submit" class="btn btn-secondary">Entfernen</button>
               </form>
             </div>
@@ -222,7 +222,7 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
       <form method="post" action="reminder_add.php" style="margin-top:12px;">
         <?= csrfField() ?>
         <input type="hidden" name="event_id" value="<?= (int) $eventId ?>" />
-        <input type="hidden" name="back_month" value="<?= h($backMonth) ?>" />
+        <input type="hidden" name="back" value="<?= h($back) ?>" />
         <label>Erinnerung hinzufügen</label>
         <div class="row">
           <select name="remind_before_minutes">

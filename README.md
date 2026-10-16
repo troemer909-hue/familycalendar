@@ -471,6 +471,17 @@ umgebogen – schreibt jede Mail in eine Datei statt sie wirklich zu
 verschicken, ausgelesen über `tests/Support/MailCapture.php`. Kein
 echter Mailserver in CI nötig.
 
+Für die session-basierten Client-Seiten (`calendar.php`, `event_form.php`,
+...) reicht der API-Testserver allein nicht: diese Seiten rufen selbst
+wieder die API auf, ein `php -S`-Prozess bearbeitet aber nur einen
+Request gleichzeitig - ein ausgehender Call auf sich selbst würde also
+blockieren. `tests/Support/FrontendServer.php` startet deshalb `public/`
+ein zweites Mal auf einem eigenen Port, ohne Catch-all-Skript (genau wie
+ein echter Webserver im Shared-Hosting). `tests/Support/
+BrowserSession.php` ist ein schlanker Cookie-Jar-HTTP-Client dafür (liest
+auch das CSRF-Token aus geladenen Formularen aus) - siehe
+`tests/Integration/CalendarViewsTest.php`.
+
 ## Mitglieder-Einladung (neu)
 
 Ersetzt den bisherigen Ablauf, bei dem der Admin selbst ein Passwort
@@ -567,3 +578,26 @@ App, nur ohne Umweg über den Browser.
 - "Installieren" bietet der Browser selbst an (z. B. über das
   Adressleisten-Icon in Chrome/Edge, "Zum Home-Bildschirm" im
   iOS-Safari-Teilen-Menü) - kein eigener Button in der App nötig.
+
+## Wochen- und Tagesansicht (neu)
+
+Zusätzlich zur Monatsübersicht gibt es jetzt eine Wochen- und eine
+Tagesansicht - an Tagen mit vielen Terminen wird die Monatsübersicht
+schnell unübersichtlich (einzelne Termine werden dort abgeschnitten).
+
+- **Umschalter** oben im Kalender (`calendar.php`) zwischen Monat/Woche/Tag.
+  Der `view`-Parameter (`month`/`week`/`day`, Standard `month`) steuert die
+  Ansicht, `date` (statt `month`) das Anker-Datum bei Woche/Tag.
+- **Wochenansicht**: dieselbe 7-Spalten-Grid wie der Monat, nur eine
+  einzelne, höhere Zeile - mehr Platz pro Tag für Termine.
+- **Tagesansicht**: Agenda-Liste statt Grid, chronologisch sortiert, mit
+  Uhrzeit, Ort und Mitglieder-Farbe pro Termin.
+- Beim Wechsel zwischen den Ansichten bleibt die aktuelle Position
+  erhalten (z.B. Monat → Woche springt auf die Woche des aktuell
+  sichtbaren Monats, nicht auf "heute").
+- Termin-/Erinnerungsformulare merken sich über einen `back`-Parameter,
+  in welcher Ansicht+Position man war, und springen nach
+  Speichern/Löschen genau dorthin zurück (vorher ging es immer zurück
+  zur Monatsansicht). `back` wird vor jeder Weiterleitung über
+  `sanitizeCalendarBack()` (`src/Helpers.php`) neu zusammengesetzt, da
+  er aus einem Formularfeld kommt und damit potenziell manipulierbar ist.

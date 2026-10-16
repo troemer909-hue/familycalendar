@@ -6,7 +6,7 @@ requireCsrf();
 $client = currentApiClient();
 
 $id = !empty($_POST['id']) ? (int) $_POST['id'] : null;
-$backMonth = $_POST['back_month'] ?? date('Y-m');
+$back = sanitizeCalendarBack($_POST['back'] ?? '');
 
 $title = trim($_POST['title'] ?? '');
 $startsAt = str_replace('T', ' ', $_POST['starts_at'] ?? '') . ':00';
@@ -14,9 +14,9 @@ $endsAt = str_replace('T', ' ', $_POST['ends_at'] ?? '') . ':00';
 $scope = $_POST['scope'] ?? 'personal';
 $participantIds = array_map('intval', $_POST['participant_ids'] ?? []);
 
-$redirectBack = function (string $message) use ($id, $backMonth): void {
-    $target = $id ? "event_form.php?id={$id}&back_month=" . urlencode($backMonth)
-                  : 'event_form.php?back_month=' . urlencode($backMonth);
+$redirectBack = function (string $message) use ($id, $back): void {
+    $target = $id ? "event_form.php?id={$id}&back=" . urlencode($back)
+                  : 'event_form.php?back=' . urlencode($back);
     header('Location: ' . $target . '&error=' . urlencode($message));
     exit;
 };
@@ -70,5 +70,5 @@ if (!$res['ok']) {
     $redirectBack($res['data']['error'] ?? 'Speichern fehlgeschlagen.');
 }
 
-header('Location: calendar.php?month=' . urlencode($backMonth));
+header('Location: calendar.php?' . $back);
 exit;
