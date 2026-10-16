@@ -118,6 +118,9 @@ $weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
       <a href="admin_families.php" class="btn btn-secondary btn-block">Plattform-Verwaltung</a>
     </p>
     <p>
+      <a href="self_update.php" class="btn btn-secondary btn-block">Selbst-Update</a>
+    </p>
+    <p>
       <a href="logout.php" class="hint-text">Abmelden</a>
     </p>
   </aside>

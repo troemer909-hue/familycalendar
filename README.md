@@ -496,3 +496,48 @@ Einladung invalidiert die vorherige.
 
 Für bereits bestehende Installationen: Migration
 `database/migrations/010_member_invites.sql` einmalig ausführen.
+
+## Selbst-Update (neu)
+
+„Knopfdruck“-Update für Installationen, die als echter Git-Checkout auf
+dem Server laufen (nicht per ZIP/FTP hochgeladen): zieht den aktuellen
+Stand des Branches nach und wendet dabei automatisch alle neuen
+`database/migrations/*.sql` an - ohne manuellen SSH-/phpMyAdmin-Schritt.
+
+**Voraussetzungen (bewusst standardmäßig AUS):**
+
+- Dieser Ordner muss ein echtes `git clone` sein (ein `.git`-Ordner muss
+  existieren) - sonst meldet die Seite „Selbst-Update“ im Sidebar klar,
+  dass es hier nicht möglich ist.
+- In der `.env`: `ENABLE_SELF_UPDATE=1` setzen. Ein Plattform-Admin kann
+  damit ein Shell-Kommando (`git fetch`/`git merge --ff-only`) auf dem
+  Server auslösen - erst nach bewusster Entscheidung aktivieren.
+- `SELF_UPDATE_BRANCH` (Standard `main`) legt fest, welcher Branch
+  gezogen wird. Kommt ausschließlich aus der `.env`, niemals aus der
+  Weboberfläche oder dem Request - es gibt keinen Weg, darüber einen
+  eigenen Branch-Namen oder Befehl einzuschleusen.
+
+**Ablauf** (`SelfUpdateController`, Seite „Selbst-Update“ im Sidebar, nur
+für `TenantContext::isPlatformAdmin()`):
+
+1. `GET /api/self-update/status` zeigt den aktuellen Commit und (falls
+   erreichbar) ob es auf dem konfigurierten Branch einen neueren Stand
+   gibt - verändert nichts.
+2. „Jetzt aktualisieren“ → `POST /api/self-update/run`:
+   - `git fetch origin <branch>` + `git merge --ff-only origin/<branch>`
+     (`src/Core/GitUpdater.php`) - **bewusst `--ff-only` statt `git
+     pull`/`reset --hard`**: gibt es auf dem Server abweichende lokale
+     Commits, scheitert das Update kontrolliert ab, statt sie
+     stillschweigend zu verwerfen.
+   - Anschließend wendet `src/Core/MigrationRunner.php` jede Datei aus
+     `database/migrations/`, die noch nicht in der Tabelle
+     `schema_migrations` vermerkt ist, einmalig an.
+   - Jeder Lauf (Erfolg wie Fehler) wird in `self_update_runs`
+     protokolliert (wer, wann, von welchem auf welchen Commit, welche
+     Migrationen).
+
+Für bereits bestehende Installationen (von VOR diesem Feature):
+Migration `database/migrations/011_self_update.sql` einmalig ausführen -
+sie legt `schema_migrations`/`self_update_runs` an UND markiert alle
+bis dahin vorhandenen Migrationen (002-011) als bereits angewendet,
+damit der Runner sie nicht fälschlich ein zweites Mal ausführt.
