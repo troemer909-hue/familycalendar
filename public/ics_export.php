@@ -27,6 +27,7 @@ $notice = $_GET['notice'] ?? null;
   <meta charset="UTF-8" />
   <title>Kalender-Abo (ICS-Export)</title>
   <link rel="stylesheet" href="styles.css" />
+<?= pwaHeadTags() ?>
 </head>
 <body>
 <div class="main-area">

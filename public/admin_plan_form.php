@@ -31,6 +31,7 @@ $priceValue = $plan['price_monthly'] ?? '0.00';
   <meta charset="UTF-8" />
   <title>Plattform-Verwaltung – Plan <?= $plan ? 'bearbeiten' : 'anlegen' ?></title>
   <link rel="stylesheet" href="styles.css" />
+<?= pwaHeadTags() ?>
 </head>
 <body>
 <div class="main-area">

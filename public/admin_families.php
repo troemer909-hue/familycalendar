@@ -29,6 +29,7 @@ $notice = $_GET['notice'] ?? null;
   <meta charset="UTF-8" />
   <title>Plattform-Verwaltung – Familien</title>
   <link rel="stylesheet" href="styles.css" />
+<?= pwaHeadTags() ?>
 </head>
 <body>
 <div class="main-area">

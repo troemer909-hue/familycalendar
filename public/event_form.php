@@ -82,6 +82,7 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
   <meta charset="UTF-8" />
   <title><?= $event ? 'Termin bearbeiten' : 'Neuer Termin' ?></title>
   <link rel="stylesheet" href="styles.css" />
+<?= pwaHeadTags() ?>
 </head>
 <body>
 <div class="main-area">
