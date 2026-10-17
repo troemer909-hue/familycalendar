@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../src/bootstrap.php';
 requireCsrf();
 
-$apiBaseUrl = defaultApiBaseUrl();
+$apiBaseUrl = resolveApiBaseUrl();
 $token = trim($_POST['token'] ?? '');
 $password = $_POST['password'] ?? '';
 $passwordConfirm = $_POST['password_confirm'] ?? '';

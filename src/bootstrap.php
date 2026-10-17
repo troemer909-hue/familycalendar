@@ -47,6 +47,25 @@ function defaultApiBaseUrl(): string
 }
 
 /**
+ * Wie defaultApiBaseUrl(), erlaubt aber weiterhin ein explizites
+ * api_base_url-POST-Feld als Override - das Feld selbst ist aus den
+ * Formularen entfernt (siehe login.php etc.), normale Nutzer senden es
+ * also nie mehr mit. Die Integration-Testsuite (siehe tests/Support/
+ * FrontendServer.php) braucht den Override aber weiterhin: dort laufen
+ * Client-Seiten und API bewusst auf ZWEI getrennten PHP-Built-in-Server-
+ * Prozessen (ein `php -S`-Prozess bearbeitet nur einen Request
+ * gleichzeitig - ein ausgehender Call von calendar.php auf sich selbst
+ * würde sonst blockieren, bis er in Timeout läuft), und muss calendar.php
+ * & Co. explizit auf den separaten API-Prozess zeigen lassen, statt auf
+ * den eigenen Host, von dem der Request kam.
+ */
+function resolveApiBaseUrl(): string
+{
+    $posted = trim((string) ($_POST['api_base_url'] ?? ''));
+    return $posted !== '' ? $posted : defaultApiBaseUrl();
+}
+
+/**
  * Auth-Daten sind bewusst NICHT mehr in einer gemeinsamen Datei gespeichert
  * (das würde auf einem von mehreren Personen genutzten Server dazu führen,
  * dass sich alle gegenseitig ein-/ausloggen), sondern in der PHP-Session –
