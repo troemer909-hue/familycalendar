@@ -37,6 +37,7 @@ function loadConfig(): array
     return [
         'api_base_url' => $_SESSION['api_base_url'] ?? DEFAULT_API_BASE_URL,
         'token' => $_SESSION['token'] ?? null,
+        'is_platform_admin' => $_SESSION['is_platform_admin'] ?? false,
     ];
 }
 
@@ -48,6 +49,19 @@ function saveConfig(array $config): void
     if (array_key_exists('token', $config)) {
         $_SESSION['token'] = $config['token'];
     }
+    if (array_key_exists('is_platform_admin', $config)) {
+        $_SESSION['is_platform_admin'] = $config['is_platform_admin'];
+    }
+}
+
+/**
+ * Nur fürs client-seitige Ein-/Ausblenden des "Plattform-Verwaltung"-Menüpunkts
+ * (siehe AuthController::login) - KEIN Sicherheitsmechanismus, die eigentliche
+ * Durchsetzung passiert serverseitig in TenantContext::requirePlatformAdmin().
+ */
+function isPlatformAdmin(): bool
+{
+    return (bool) loadConfig()['is_platform_admin'];
 }
 
 function currentApiClient(): ApiClient

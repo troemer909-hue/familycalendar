@@ -25,6 +25,10 @@ if (!$res['ok']) {
 }
 
 session_regenerate_id(true);
-saveConfig(['api_base_url' => $apiBaseUrl, 'token' => $res['data']['token']]);
+saveConfig([
+    'api_base_url' => $apiBaseUrl,
+    'token' => $res['data']['token'],
+    'is_platform_admin' => $res['data']['is_platform_admin'] ?? false,
+]);
 header('Location: calendar.php');
 exit;
