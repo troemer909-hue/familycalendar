@@ -2,17 +2,15 @@
 require_once __DIR__ . '/../src/bootstrap.php';
 requireCsrf();
 
-$apiBaseUrl = trim($_POST['api_base_url'] ?? '');
+$apiBaseUrl = resolveApiBaseUrl();
 $email = trim($_POST['email'] ?? '');
 $password = $_POST['password'] ?? '';
 
 if ($apiBaseUrl === '' || $email === '' || $password === '') {
-    header('Location: login.php?error=' . urlencode('Bitte alle Felder ausfüllen.'));
+    header('Location: login.php?error=' . urlencode('Bitte E-Mail und Passwort ausfüllen.'));
     exit;
 }
 
-// API-Adresse merken, BEVOR wir sie brauchen – auch wenn der Login scheitert,
-// muss das Feld beim nächsten Versuch nicht neu eingetippt werden.
 saveConfig(['api_base_url' => $apiBaseUrl, 'token' => null]);
 
 $client = new ApiClient($apiBaseUrl, null);

@@ -34,31 +34,96 @@ a:hover { text-decoration: underline; }
 .brand .word-orange { color: #f2763b; }
 .brand:hover { text-decoration: none; }
 
-.login-wrap {
+/* -------------------------- Anmeldung/Registrierung (zweispaltig) -------------------------- */
+.auth-layout { min-height: 100vh; display: flex; }
+
+.auth-panel {
+  flex: 0 0 42%;
+  background: linear-gradient(160deg, var(--warm-1), var(--warm-2), var(--warm-3));
+  color: #fff;
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+.auth-panel::after {
+  content: '';
+  position: absolute;
+  right: -140px;
+  bottom: -140px;
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.18), transparent 70%);
+}
+.auth-panel .brand {
+  background: rgba(255,255,255,.95);
+  padding: 10px 18px;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.15);
+  align-self: flex-start;
+  position: relative;
+}
+.auth-panel-copy { margin: auto 0; max-width: 380px; position: relative; }
+.auth-panel-copy .eyebrow { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: rgba(255,255,255,.85); margin: 0 0 14px; }
+.auth-panel-copy h1 { font-size: 30px; line-height: 1.25; margin: 0 0 14px; color: #fff; }
+.auth-panel-copy p { color: rgba(255,255,255,.85); font-size: 15px; line-height: 1.6; margin: 0; }
+.auth-panel-footer { font-size: 13px; color: rgba(255,255,255,.65); position: relative; }
+
+.auth-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background: #f4f5f7;
+}
+.auth-content .brand { display: none; margin-bottom: 28px; }
+
+.login-card {
+  background: #fff;
+  padding: 40px 44px;
+  border-radius: 16px;
+  width: 380px;
+  max-width: 100%;
+  box-shadow: 0 1px 2px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.08);
+}
+.eyebrow { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--teal); margin: 0 0 8px; }
+.login-card h1, .login-card h2 { margin: 0 0 6px; font-size: 24px; }
+.login-card .card-intro { margin: 0 0 22px; }
+
+.auth-footer { margin-top: 24px; font-size: 13px; color: #94a3b8; text-align: center; }
+.auth-footer a { color: #64748b; }
+.auth-footer .sep { margin: 0 8px; }
+
+@media (max-width: 860px) {
+  .auth-panel { display: none; }
+  .auth-content .brand { display: flex; }
+}
+
+/* Einfachere, einspaltige Variante für Nebenstrecken (Passwort vergessen/
+   zurücksetzen, Einladung annehmen) - dieselbe Gradient-Bühne wie der
+   Haupt-Login, aber ohne die zweispaltige Produkt-Story, da hier niemand
+   zum ersten Mal auf die App trifft. */
+.auth-standalone {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 24px;
-  background: linear-gradient(135deg, var(--warm-1), var(--warm-2), var(--warm-3));
+  padding: 40px 24px;
+  background: linear-gradient(160deg, var(--warm-1), var(--warm-2), var(--warm-3));
 }
-.login-wrap .brand {
-  background: rgba(255,255,255,.92);
-  padding: 10px 20px;
-  border-radius: 999px;
+.auth-standalone .brand {
+  background: rgba(255,255,255,.95);
+  padding: 10px 18px;
+  border-radius: 14px;
   box-shadow: 0 8px 24px rgba(0,0,0,.15);
 }
-.login-wrap .brand .mark { width: 40px; height: 40px; }
-.login-wrap .brand .word { font-size: 22px; }
-.login-card {
-  background: #fff;
-  padding: 36px 40px;
-  border-radius: 16px;
-  width: 360px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-}
-.login-card h1 { margin: 0 0 20px; font-size: 22px; text-align: center; }
 
 label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 4px; color: #475069; }
 input[type=text], input[type=email], input[type=password], input[type=number],
@@ -128,6 +193,9 @@ button, .btn {
 .nav-icon { width: 18px; height: 18px; flex-shrink: 0; color: #64748b; margin-top: 1px; }
 .nav-link-muted { color: #64748b; }
 .nav-group-footer { margin-top: 8px; padding-top: 12px; border-top: 1px solid #e5e7ec; }
+.legal-links { margin: 8px 0 0; padding: 0 8px; font-size: 12px; color: #94a3b8; }
+.legal-links a { color: #94a3b8; }
+.legal-links .sep { margin: 0 6px; }
 
 .main-area { flex: 1; padding: 20px 28px; }
 
@@ -181,6 +249,11 @@ button, .btn {
 
 /* -------------------------- Formularseiten -------------------------- */
 .form-card { background: #fff; padding: 28px 32px; border-radius: 14px; max-width: 480px; }
+
+/* -------------------------- Rechtliche Seiten (Impressum/Datenschutz) -------------------------- */
+.legal-page section { margin-top: 24px; }
+.legal-page section h2 { font-size: 16px; margin: 0 0 8px; }
+.legal-page section p { margin: 0; line-height: 1.6; color: #475069; }
 .row { display: flex; gap: 12px; }
 .row > * { flex: 1; }
 .checkbox-label { display: flex; align-items: center; gap: 8px; font-weight: 500; }

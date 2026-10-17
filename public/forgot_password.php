@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . '/../src/bootstrap.php';
-$config = loadConfig();
 $error = $_GET['error'] ?? null;
 $sent = isset($_GET['sent']);
 ?>
@@ -13,7 +12,7 @@ $sent = isset($_GET['sent']);
 <?= pwaHeadTags() ?>
 </head>
 <body>
-  <div class="login-wrap">
+  <div class="auth-standalone">
     <?= brandLogo('', 'login.php') ?>
     <div class="login-card">
       <h1>Passwort vergessen</h1>
@@ -26,18 +25,15 @@ $sent = isset($_GET['sent']);
         </p>
         <p class="switch-link"><a href="reset_password.php">Code schon erhalten? Weiter zum Zurücksetzen</a></p>
       <?php else: ?>
-        <p class="hint-text">
+        <p class="hint-text card-intro">
           Gib deine E-Mail-Adresse ein - falls dazu ein Konto existiert,
           bekommst du einen Link zum Zurücksetzen des Passworts.
         </p>
 
         <form method="post" action="forgot_password_submit.php">
           <?= csrfField() ?>
-          <label>API-Adresse des Backends</label>
-          <input type="text" name="api_base_url" value="<?= h($config['api_base_url']) ?>" placeholder="https://family.eastcon.eu" required />
-
           <label>E-Mail</label>
-          <input type="email" name="email" required />
+          <input type="email" name="email" required autofocus />
 
           <button type="submit" class="btn btn-primary btn-block">Link anfordern</button>
         </form>
@@ -49,6 +45,9 @@ $sent = isset($_GET['sent']);
 
       <p class="switch-link"><a href="login.php">Zurück zur Anmeldung</a></p>
     </div>
+    <footer class="auth-footer">
+      <a href="impressum.php">Impressum</a><span class="sep">·</span><a href="datenschutz.php">Datenschutz</a>
+    </footer>
   </div>
 </body>
 </html>

@@ -25,6 +25,47 @@ require_once __DIR__ . '/Helpers.php';
 const DEFAULT_API_BASE_URL = '';
 
 /**
+ * Leitet die API-Basis-URL aus dem aktuellen Request her, wenn
+ * DEFAULT_API_BASE_URL nicht gesetzt ist - in diesem zusammengeführten
+ * Setup liegen Client und API immer auf derselben Domain (siehe oben), das
+ * manuelle Eintragen der "API-Adresse" bei jedem Login war daher reine
+ * Reibung ohne echten Nutzen. $_SERVER['HTTP_HOST'] kommt vom Client und
+ * wird NICHT für sicherheitsrelevante Entscheidungen verwendet (nur um die
+ * URL für den eigenen nachgelagerten API-Call zusammenzubauen, der ohnehin
+ * serverseitig authentifiziert/validiert wird).
+ */
+function defaultApiBaseUrl(): string
+{
+    if (DEFAULT_API_BASE_URL !== '') {
+        return DEFAULT_API_BASE_URL;
+    }
+    if (empty($_SERVER['HTTP_HOST'])) {
+        return '';
+    }
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    return $scheme . '://' . $_SERVER['HTTP_HOST'];
+}
+
+/**
+ * Wie defaultApiBaseUrl(), erlaubt aber weiterhin ein explizites
+ * api_base_url-POST-Feld als Override - das Feld selbst ist aus den
+ * Formularen entfernt (siehe login.php etc.), normale Nutzer senden es
+ * also nie mehr mit. Die Integration-Testsuite (siehe tests/Support/
+ * FrontendServer.php) braucht den Override aber weiterhin: dort laufen
+ * Client-Seiten und API bewusst auf ZWEI getrennten PHP-Built-in-Server-
+ * Prozessen (ein `php -S`-Prozess bearbeitet nur einen Request
+ * gleichzeitig - ein ausgehender Call von calendar.php auf sich selbst
+ * würde sonst blockieren, bis er in Timeout läuft), und muss calendar.php
+ * & Co. explizit auf den separaten API-Prozess zeigen lassen, statt auf
+ * den eigenen Host, von dem der Request kam.
+ */
+function resolveApiBaseUrl(): string
+{
+    $posted = trim((string) ($_POST['api_base_url'] ?? ''));
+    return $posted !== '' ? $posted : defaultApiBaseUrl();
+}
+
+/**
  * Auth-Daten sind bewusst NICHT mehr in einer gemeinsamen Datei gespeichert
  * (das würde auf einem von mehreren Personen genutzten Server dazu führen,
  * dass sich alle gegenseitig ein-/ausloggen), sondern in der PHP-Session –
