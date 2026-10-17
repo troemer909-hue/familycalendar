@@ -23,6 +23,7 @@ $notice = $_GET['notice'] ?? null;
 </head>
 <body>
 <div class="main-area">
+  <div class="page-header"><?= brandLogo() ?></div>
   <div class="form-card" style="max-width:700px;">
     <h1>Selbst-Update</h1>
     <p class="hint-text">

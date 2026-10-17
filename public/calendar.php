@@ -149,6 +149,7 @@ if ($view === 'day') {
 <body>
 <div class="app-layout">
   <aside class="sidebar">
+    <?= brandLogo() ?>
     <h2>Familie</h2>
     <?php foreach ($members as $m): $isHidden = in_array($m['id'], $hiddenIds, true); ?>
       <?php

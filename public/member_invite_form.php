@@ -34,6 +34,7 @@ if (!$target) {
 </head>
 <body>
 <div class="main-area">
+  <div class="page-header"><?= brandLogo() ?></div>
   <div class="form-card">
     <h1>Einladen</h1>
     <p class="hint-text">

@@ -28,6 +28,7 @@ $error = $_GET['error'] ?? null;
 </head>
 <body>
 <div class="main-area">
+  <div class="page-header"><?= brandLogo() ?></div>
   <div class="form-card" style="max-width:560px;">
     <h1>Benachrichtigungseinstellungen</h1>
     <p class="hint-text">

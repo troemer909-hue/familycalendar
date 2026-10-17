@@ -35,6 +35,7 @@ $priceValue = $plan['price_monthly'] ?? '0.00';
 </head>
 <body>
 <div class="main-area">
+  <div class="page-header"><?= brandLogo() ?></div>
   <div class="form-card">
     <h1><?= $plan ? 'Plan bearbeiten' : 'Neuer Plan' ?></h1>
 

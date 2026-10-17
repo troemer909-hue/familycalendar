@@ -14,8 +14,9 @@ $sent = isset($_GET['sent']);
 </head>
 <body>
   <div class="login-wrap">
+    <?= brandLogo('', 'login.php') ?>
     <div class="login-card">
-      <h1>📅 Passwort vergessen</h1>
+      <h1>Passwort vergessen</h1>
 
       <?php if ($sent): ?>
         <p class="success-box">

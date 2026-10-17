@@ -1,20 +1,56 @@
+/* Branding abgestimmt auf die Marketing-Webseite (family-kalender.de):
+   Navy für Text/Flächen, Teal als Primärfarbe, warmes Gradient (Orange
+   -> Rosé -> Himbeer) für Akzente/CTAs. */
+:root {
+  --navy: #203650;
+  --teal: #238fa8;
+  --teal-2: #29b5bd;
+  --warm-1: #ff9d28;
+  --warm-2: #f45155;
+  --warm-3: #ef3b59;
+  --muted: #94a3b8;
+}
+
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: 'Inter', -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   background: #f4f5f7;
-  color: #1f2430;
+  color: var(--navy);
 }
-a { color: #3b82f6; text-decoration: none; }
+a { color: var(--teal); text-decoration: none; }
 a:hover { text-decoration: underline; }
+
+.brand { display: flex; align-items: center; gap: .5em; text-decoration: none; }
+.brand .mark { width: 36px; height: 36px; flex: none; }
+.brand .word {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  color: var(--navy);
+  white-space: nowrap;
+}
+.brand .word-teal { color: var(--teal); }
+.brand .word-orange { color: #f2763b; }
+.brand:hover { text-decoration: none; }
 
 .login-wrap {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  gap: 24px;
+  background: linear-gradient(135deg, var(--warm-1), var(--warm-2), var(--warm-3));
 }
+.login-wrap .brand {
+  background: rgba(255,255,255,.92);
+  padding: 10px 20px;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.15);
+}
+.login-wrap .brand .mark { width: 40px; height: 40px; }
+.login-wrap .brand .word { font-size: 22px; }
 .login-card {
   background: #fff;
   padding: 36px 40px;
@@ -46,9 +82,9 @@ button, .btn {
   padding: 9px 16px;
   font-family: inherit;
 }
-.btn-primary { background: #3b82f6; color: #fff; }
-.btn-primary:hover { background: #2563eb; text-decoration: none; }
-.btn-secondary { background: #eef0f4; color: #1f2430; }
+.btn-primary { background: var(--teal); color: #fff; }
+.btn-primary:hover { background: var(--navy); text-decoration: none; }
+.btn-secondary { background: #eef0f4; color: var(--navy); }
 .btn-secondary:hover { background: #e2e5ec; text-decoration: none; }
 .btn-danger { background: #fee2e2; color: #b91c1c; }
 .btn-block { width: 100%; margin-top: 16px; text-align: center; }
@@ -62,6 +98,11 @@ button, .btn {
 .app-layout { display: flex; min-height: 100vh; }
 
 .sidebar { width: 230px; background: #fff; border-right: 1px solid #e5e7ec; padding: 20px 16px; }
+.sidebar .brand { margin-bottom: 20px; }
+.sidebar .brand .mark { width: 30px; height: 30px; }
+.sidebar .brand .word { font-size: 15px; }
+
+.page-header { margin-bottom: 20px; }
 .sidebar h2 { font-size: 14px; text-transform: uppercase; color: #94a3b8; margin: 0 0 12px; }
 .member-chip { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; font-size: 14px; }
 .member-chip.inactive { opacity: 0.4; }
@@ -76,7 +117,7 @@ button, .btn {
 
 .view-switch { display: flex; gap: 3px; background: #f0f1f4; border-radius: 8px; padding: 3px; }
 .view-switch a { padding: 6px 14px; font-size: 13px; font-weight: 600; border-radius: 6px; color: #64748b; text-decoration: none; }
-.view-switch a.active { background: #fff; color: #1f2430; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.view-switch a.active { background: #fff; color: var(--navy); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
 
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
 .calendar-weekday { font-size: 12px; font-weight: 700; color: #94a3b8; text-align: center; padding-bottom: 4px; }
@@ -85,14 +126,14 @@ button, .btn {
   border: 1px solid #edeef2; display: flex; flex-direction: column; gap: 3px;
 }
 .calendar-day.other-month { background: #fafafb; color: #c3c8d3; }
-.calendar-day.today { border: 2px solid #3b82f6; }
+.calendar-day.today { border: 2px solid var(--teal); }
 .day-header { display: flex; justify-content: space-between; align-items: center; }
 .day-number { font-size: 12px; font-weight: 700; }
 .add-link { font-size: 14px; font-weight: 700; color: #94a3b8; }
-.add-link:hover { color: #3b82f6; }
+.add-link:hover { color: var(--teal); }
 
 .event-chip { display: block; font-size: 11px; padding: 2px 6px; border-radius: 5px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.event-chip.family-event { background: #1f2430; }
+.event-chip.family-event { background: var(--navy); }
 
 /* Wochenansicht: dieselbe 7-Spalten-Grid wie der Monat, nur eine Zeile
    mit mehr Höhe (mehr Termine gleichzeitig sichtbar, siehe Anlass für

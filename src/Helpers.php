@@ -20,9 +20,83 @@ function pwaHeadTags(): string
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#203650" />
   <link rel="manifest" href="/manifest.json" />
+  <link rel="icon" href="/icons/icon-192.png" />
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Family-Kalender" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,380;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800&display=swap" />
+HTML;
+}
+
+/**
+ * Logo-Mark (Kalender-Icon) + Wortmarke "Family-Kalender" als Inline-SVG -
+ * identische Pfade/Farbwerte wie auf der Marketing-Webseite
+ * (family-kalender.de), damit das Branding zwischen Marketing-Seite und
+ * App konsistent ist. Als <symbol>+<use> statt direktem Pfad-Duplikat,
+ * damit mehrere Aufrufe auf derselben Seite (z.B. Sidebar + mobiles
+ * Menü) nicht unnötig aufblähen - die <defs> werden pro Seite einmalig
+ * über $alreadyRendered ausgegeben.
+ *
+ * @param string $extraClass zusätzliche CSS-Klasse auf dem äußeren <a>,
+ *   z.B. um die Größe je nach Einsatzort (Sidebar vs. Login-Seite) zu steuern.
+ * @param string $href Linkziel - "calendar.php" für eingeloggte Seiten,
+ *   "login.php" für die Anmelde-/Registrierungs-Seiten selbst.
+ */
+function brandLogo(string $extraClass = '', string $href = 'calendar.php'): string
+{
+    static $defsRendered = false;
+
+    $defs = '';
+    if (!$defsRendered) {
+        $defsRendered = true;
+        $defs = <<<'SVG'
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="fkWarmGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#ff9d28"/><stop offset=".55" stop-color="#f45155"/><stop offset="1" stop-color="#ef3b59"/>
+    </linearGradient>
+    <linearGradient id="fkCoolGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#29b5bd"/><stop offset="1" stop-color="#177fa1"/>
+    </linearGradient>
+    <symbol id="fkCalIcon" viewBox="0 0 200 200">
+      <rect x="18" y="20" width="164" height="162" rx="22" fill="#fff"/>
+      <path d="M18 43Q18 20 41 20h118q23 0 23 23v20H18z" fill="url(#fkWarmGrad)"/>
+      <path d="M57 5v23M143 5v23" stroke="#203650" stroke-width="11" stroke-linecap="round"/>
+      <path d="M57 21v12M143 21v12" stroke="#fff" stroke-width="17" stroke-linecap="round"/>
+      <path d="M57 21v12M143 21v12" stroke="#203650" stroke-width="9" stroke-linecap="round"/>
+      <path d="M42 96h20m72-20h22m-75-1h11m56 68h14M39 151h11" stroke="#bfd0dc" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="79" cy="82" r="12" fill="url(#fkWarmGrad)"/>
+      <circle cx="122" cy="72" r="13" fill="url(#fkCoolGrad)"/>
+      <circle cx="150" cy="94" r="7" fill="url(#fkWarmGrad)"/>
+      <circle cx="40" cy="169" r="7" fill="url(#fkCoolGrad)"/>
+      <path d="M82 150c-26-4-38-20-31-34 6-11 23-13 34-4" fill="none" stroke="url(#fkWarmGrad)" stroke-width="12" stroke-linecap="round"/>
+      <circle cx="103" cy="122" r="22" fill="none" stroke="url(#fkCoolGrad)" stroke-width="11"/>
+      <circle cx="103" cy="123" r="8" fill="url(#fkWarmGrad)"/>
+      <path d="M85 140c-2-13 7-20 18-20 13 0 21 9 20 21v30H91v-19c-10-5-17-11-20-19" fill="url(#fkCoolGrad)"/>
+      <circle cx="83" cy="133" r="9" fill="url(#fkCoolGrad)"/>
+      <path d="M119 145c18-5 29-17 37-27 4-5 11 0 8 6-7 15-16 25-27 31v16h-30v-12c1-7 5-11 12-14z" fill="url(#fkWarmGrad)"/>
+    </symbol>
+  </defs>
+</svg>
+SVG;
+    }
+
+    $class = h(trim('brand ' . $extraClass));
+    $hrefAttr = h($href);
+
+    // Die Wortmarke wird bewusst als normaler HTML-Text (statt als
+    // <text> innerhalb des SVG) gerendert: SVG-<text> in sehr kleinen
+    // Zielgrößen (Sidebar) führte je nach Font-Stack/Browser zu
+    // abgeschnittenem Text (Hinting-/Kerning-Eigenheiten bei winzigen
+    // SVG-Textgrößen) - echter DOM-Text skaliert dagegen zuverlässig
+    // mit font-size und ist zusätzlich besser für Screenreader.
+    return $defs . <<<HTML
+<a href="{$hrefAttr}" class="{$class}">
+  <svg class="mark" viewBox="0 0 200 200" aria-hidden="true"><use href="#fkCalIcon"/></svg>
+  <span class="word">Family-<span class="word-teal">Kalen</span><span class="word-orange">der</span></span>
+</a>
 HTML;
 }
 

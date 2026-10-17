@@ -13,8 +13,9 @@ $error = $_GET['error'] ?? null;
 </head>
 <body>
   <div class="login-wrap">
+    <?= brandLogo('', 'login.php') ?>
     <div class="login-card">
-      <h1>📅 Neue Familie anlegen</h1>
+      <h1>Neue Familie anlegen</h1>
 
       <form method="post" action="register_submit.php">
         <?= csrfField() ?>
