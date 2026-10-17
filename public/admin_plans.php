@@ -37,6 +37,7 @@ $notice = $_GET['notice'] ?? null;
     <?php if ($error): ?><p class="error-box"><?= h($error) ?></p><?php endif; ?>
     <?php if ($plansError): ?><p class="error-box"><?= h($plansError) ?></p><?php endif; ?>
 
+    <div class="table-scroll">
     <table class="admin-table">
       <thead>
         <tr>
@@ -73,6 +74,7 @@ $notice = $_GET['notice'] ?? null;
         <?php endif; ?>
       </tbody>
     </table>
+    </div>
 
     <p style="margin-top:20px;">
       <a href="admin_plan_form.php" class="btn btn-primary">+ Neuer Plan</a>
