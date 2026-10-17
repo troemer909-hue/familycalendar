@@ -10,7 +10,16 @@ handleUnauthorized($res);
 handleForbidden($res);
 
 if (!$res['ok']) {
-    header('Location: self_update.php?error=' . urlencode($res['data']['error'] ?? 'Update fehlgeschlagen.'));
+    // Die Fehlermeldung (z.B. roher Git-Stderr-Text bei einem fehlgeschlagenen
+    // Merge) landet bewusst NICHT in der Redirect-URL: Git-Fehlermeldungen
+    // enthalten oft Dateipfade (z.B. ".htaccess", "wp-config.php"-artige
+    // Namen durch Drittanbieter-Dateien), die auf manchen Hosts von
+    // generischen WAF-Regeln (z.B. ModSecurity-"sensible Datei"-Filter) als
+    // Scan-Versuch missverstanden werden - selbst wenn nur der TEXT der
+    // Fehlermeldung diese Zeichenkette enthält, nicht die URL selbst. Statt
+    // in der URL wird die Meldung daher in der Session zwischengespeichert.
+    $_SESSION['self_update_error'] = $res['data']['error'] ?? 'Update fehlgeschlagen.';
+    header('Location: self_update.php');
     exit;
 }
 
