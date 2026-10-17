@@ -9,10 +9,22 @@ declare(strict_types=1);
  */
 final class ApiClient
 {
+    /**
+     * @var \CurlHandle|resource|null
+     */
+    private $ch = null;
+
     public function __construct(
         private readonly string $baseUrl,
         private readonly ?string $token
     ) {
+    }
+
+    public function __destruct()
+    {
+        if ($this->ch !== null) {
+            curl_close($this->ch);
+        }
     }
 
     /**
@@ -24,7 +36,25 @@ final class ApiClient
             return ['ok' => false, 'status' => 0, 'data' => ['error' => 'Keine API-Adresse konfiguriert.']];
         }
 
-        $ch = curl_init(rtrim($this->baseUrl, '/') . $path);
+        // EIN cURL-Handle pro ApiClient-Instanz wird über mehrere request()-
+        // Aufrufe hinweg wiederverwendet (statt pro Aufruf neu zu öffnen und
+        // zu schließen) - curl_reset() setzt nur die Optionen zurück, NICHT
+        // den internen DNS-/Verbindungs-Cache des Handles. Seiten wie
+        // calendar.php rufen mehrere Endpunkte auf demselben Host
+        // nacheinander auf (/api/members, /api/events); ohne Wiederverwendung
+        // zahlt jeder einzelne Aufruf eine komplette DNS-Auflösung (und ggf.
+        // einen neuen TLS-Handshake) erneut - auf Hosts mit langsamer
+        // DNS-Auflösung (z.B. ein nicht erreichbarer erster Nameserver mit
+        // Timeout-Fallback) macht das den Unterschied zwischen "sofort" und
+        // mehreren Sekunden PRO Aufruf.
+        if ($this->ch === null) {
+            $this->ch = curl_init();
+        } else {
+            curl_reset($this->ch);
+        }
+        $ch = $this->ch;
+
+        curl_setopt($ch, CURLOPT_URL, rtrim($this->baseUrl, '/') . $path);
 
         $headers = ['Content-Type: application/json'];
         if ($this->token) {
@@ -53,13 +83,13 @@ final class ApiClient
         $raw = curl_exec($ch);
 
         if ($raw === false) {
-            $error = curl_error($ch);
-            curl_close($ch);
-            return ['ok' => false, 'status' => 0, 'data' => ['error' => 'Netzwerkfehler: ' . $error]];
+            // Handle NICHT schließen (curl_close) - bleibt für den nächsten
+            // request()-Aufruf auf derselben Instanz erhalten, wird in
+            // __destruct() final geschlossen.
+            return ['ok' => false, 'status' => 0, 'data' => ['error' => 'Netzwerkfehler: ' . curl_error($ch)]];
         }
 
         $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
 
         $data = json_decode($raw, true);
 
