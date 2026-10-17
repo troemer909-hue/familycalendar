@@ -36,6 +36,8 @@ input[type=datetime-local], select, textarea {
 }
 textarea { resize: vertical; }
 
+.color-input { padding: 4px; height: 38px; cursor: pointer; }
+
 button, .btn {
   display: inline-block;
   cursor: pointer;

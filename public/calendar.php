@@ -193,17 +193,15 @@ if ($view === 'day') {
         </a>
       </div>
 
+      <?php if (isPlatformAdmin()): ?>
       <div class="nav-group">
         <span class="nav-group-label">Verwaltung</span>
         <a href="admin_families.php" class="nav-link">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4 6v6c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9V6z"/></svg>
           <span>Plattform-Verwaltung</span>
         </a>
-        <a href="self_update.php" class="nav-link">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12a8 8 0 0 1 14.6-4.6M20 12a8 8 0 0 1-14.6 4.6"/><path d="M18.6 3.4V8h-4.6M5.4 20.6V16H10"/></svg>
-          <span>Selbst-Update</span>
-        </a>
       </div>
+      <?php endif; ?>
 
       <div class="nav-group nav-group-footer">
         <a href="logout.php" class="nav-link nav-link-muted">
