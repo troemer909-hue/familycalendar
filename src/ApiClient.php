@@ -39,8 +39,15 @@ final class ApiClient
             CURLOPT_SSL_VERIFYPEER => true,
         ]);
 
-        if ($body !== null) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body, JSON_UNESCAPED_UNICODE));
+        // Bei POST/PUT/PATCH/DELETE IMMER CURLOPT_POSTFIELDS setzen, auch
+        // ohne Body (leerer String statt null) - cURL schickt sonst einen
+        // Request ganz ohne Content-Length-Header, was manche WAFs
+        // (z.B. ModSecurity/COMODO-Regelsätze auf Shared-Hosting) als
+        // Protokollverstoß werten und mit 403 blocken, bevor der Request
+        // überhaupt bei PHP ankommt (betraf z.B. den bodylosen POST von
+        // Selbst-Update).
+        if (!in_array($method, ['GET', 'HEAD'], true)) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body !== null ? json_encode($body, JSON_UNESCAPED_UNICODE) : '');
         }
 
         $raw = curl_exec($ch);
