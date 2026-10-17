@@ -60,6 +60,7 @@ $notice = $_GET['notice'] ?? null;
       <button type="submit" class="btn btn-secondary">Filtern</button>
     </form>
 
+    <div class="table-scroll">
     <table class="admin-table">
       <thead>
         <tr>
@@ -104,6 +105,7 @@ $notice = $_GET['notice'] ?? null;
         <?php endif; ?>
       </tbody>
     </table>
+    </div>
 
     <p style="margin-top:20px;">
       <a href="calendar.php" class="btn btn-secondary">Zurück zum Kalender</a>

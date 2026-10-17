@@ -164,6 +164,33 @@ button, .btn {
 /* -------------------------- App-Layout -------------------------- */
 .app-layout { display: flex; min-height: 100vh; }
 
+/* Nur auf schmalen Bildschirmen sichtbar (siehe @media unten) - trägt
+   das Logo + den Hamburger-Button, wenn die Sidebar als Off-Canvas-
+   Drawer eingeklappt ist. */
+.mobile-topbar { display: none; align-items: center; gap: 12px; }
+.sidebar-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: #fff;
+  border: 1px solid #d7dae1;
+  border-radius: 8px;
+  color: var(--navy);
+  flex: none;
+}
+.sidebar-toggle svg { width: 22px; height: 22px; }
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, .45);
+  z-index: 40;
+}
+.sidebar-backdrop.visible { display: block; }
+
 .sidebar { width: 230px; background: #fff; border-right: 1px solid #e5e7ec; padding: 20px 16px; }
 .sidebar .brand { margin-bottom: 20px; }
 .sidebar .brand .mark { width: 30px; height: 30px; }
@@ -217,7 +244,7 @@ button, .btn {
 .calendar-day.other-month { background: #fafafb; color: #c3c8d3; }
 .calendar-day.today { border: 2px solid var(--teal); }
 .day-header { display: flex; justify-content: space-between; align-items: center; }
-.day-number { font-size: 12px; font-weight: 700; }
+.day-number { font-size: 12px; font-weight: 700; color: inherit; text-decoration: none; }
 .add-link { font-size: 14px; font-weight: 700; color: #94a3b8; }
 .add-link:hover { color: var(--teal); }
 
@@ -282,3 +309,132 @@ button, .btn {
 .admin-table tr:last-child td { border-bottom: none; }
 .admin-table select { padding: 6px 8px; font-size: 13px; }
 .admin-filter-row { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
+/* Tabellen selbst bleiben in voller Breite (Spalten nicht künstlich
+   gequetscht) - stattdessen scrollt nur dieser Wrapper horizontal,
+   falls die Tabelle breiter als der Bildschirm ist. */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -2px; }
+.table-scroll .admin-table { min-width: 640px; }
+
+/* ==================================================================
+   Mobile: App-Layout (Sidebar -> Off-Canvas-Drawer), Toolbar und
+   Kalenderraster. Gleicher Breakpoint wie bei .auth-layout, damit die
+   App als Ganzes an einer einzigen Bildschirmbreite "umklappt".
+   ================================================================== */
+@media (max-width: 860px) {
+  .mobile-topbar {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: #fff;
+    border-bottom: 1px solid #e5e7ec;
+    padding: 10px 14px;
+  }
+  .mobile-topbar .brand .word { font-size: 16px; }
+  .sidebar-toggle { display: flex; }
+
+  .app-layout { flex-direction: column; min-height: auto; }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 86%;
+    max-width: 320px;
+    z-index: 50;
+    overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform .2s ease-out;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.04);
+  }
+  .sidebar.open { transform: translateX(0); }
+  /* Logo oben in der Sidebar ist auf Mobile redundant zum Logo in der
+     Topbar - spart Platz im schmalen Drawer. */
+  .sidebar > .brand:first-child { display: none; }
+
+  .main-area { padding: 16px; }
+
+  .toolbar { gap: 12px; }
+  .month-nav { flex: 1 1 100%; justify-content: space-between; }
+  #current-month-label { min-width: 0; flex: 1; text-align: center; font-size: 16px; }
+  .view-switch { flex: 1 1 auto; }
+  .view-switch a { flex: 1; text-align: center; padding: 8px 10px; }
+  .toolbar > .btn-primary { flex: 1 1 100%; text-align: center; }
+
+  /* Touch-Targets auf min. ~44px anheben (Apple/Google-Empfehlung) -
+     auf dem Desktop bleibt die kompaktere Größe, da dort mit Maus/
+     Trackpad statt Finger bedient wird. */
+  .month-nav .btn { width: 44px; height: 44px; }
+  button, .btn { padding: 11px 16px; }
+  .nav-link { padding: 11px 8px; }
+
+  /* Monats-/Wochenraster: Spalten dürfen auf schmalen Screens nicht
+     unter eine lesbare Breite schrumpfen - stattdessen scrollt das
+     Raster horizontal, die Wochentags-Reihenfolge bleibt dabei stabil
+     erreichbar statt auf Agenda-only reduziert zu werden. */
+  .calendar-grid {
+    grid-template-columns: repeat(7, minmax(78px, 1fr));
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .calendar-day { min-height: 92px; padding: 5px; }
+  .calendar-grid.view-week .calendar-day { min-height: 280px; }
+  .event-chip { font-size: 10px; padding: 2px 5px; }
+  .day-event-time { min-width: 72px; font-size: 11px; }
+
+  .form-card { padding: 20px; max-width: 100%; }
+  .row { flex-direction: column; gap: 0; }
+}
+
+/* Echte Telefonbreite (praktisch jedes Smartphone im Hochformat): das
+   7-Spalten-Raster aus der Desktop-/Tablet-Ansicht lässt sich hier nicht
+   mehr sinnvoll mit lesbarem Text pro Zelle darstellen. Statt horizontal
+   zu scrollen (unten in .view-week weiterhin genutzt), werden alle 7
+   Spalten erzwungen sichtbar und Termine nur noch als farbiger Punkt
+   gezeigt - Tippen auf die Tageszahl öffnet die volle Agenda-Ansicht des
+   Tages (siehe day-number-Link in calendar.php), wo Titel wieder lesbar
+   sind. Dasselbe Muster wie bei den meisten mobilen Kalender-Apps. */
+@media (max-width: 600px) {
+  .calendar-grid:not(.view-week) {
+    grid-template-columns: repeat(7, 1fr);
+    overflow-x: visible;
+    gap: 3px;
+  }
+  .calendar-grid:not(.view-week) .calendar-weekday { font-size: 10px; padding-bottom: 2px; }
+  .calendar-grid:not(.view-week) .calendar-day { min-height: 52px; padding: 3px 2px; gap: 2px; border-radius: 7px; }
+  .calendar-grid:not(.view-week) .day-header { gap: 2px; }
+  .calendar-grid:not(.view-week) .day-number { font-size: 11px; padding: 1px; }
+  .calendar-grid:not(.view-week) .add-link { display: none; }
+  .calendar-grid:not(.view-week) .event-chip {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    padding: 0;
+    margin: 1px 1px 0 0;
+    border-radius: 50%;
+    overflow: hidden;
+    text-indent: -999px;
+    vertical-align: top;
+  }
+
+  /* Wochenansicht: statt 7 schmalen Spalten nebeneinander eine vertikal
+     gestapelte Liste - ein Tag pro Block, mit vollem Chip-Text wie am
+     Desktop, nur untereinander statt im Raster. Deutlich besser bedienbar
+     als ein horizontal scrollendes 7-Spalten-Raster auf Telefonbreite. */
+  .calendar-grid.view-week {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-x: visible;
+  }
+  .calendar-grid.view-week .calendar-weekday { display: none; }
+  .calendar-grid.view-week .calendar-day { min-height: 0; }
+  .calendar-grid.view-week .day-header { gap: 10px; }
+  .calendar-grid.view-week .weekday-label { flex-basis: auto; }
+}
+
+@media (max-width: 420px) {
+  .day-event { padding: 10px 12px; }
+}

@@ -148,7 +148,14 @@ if ($view === 'day') {
 </head>
 <body>
 <div class="app-layout">
-  <aside class="sidebar">
+  <header class="mobile-topbar">
+    <button type="button" class="sidebar-toggle" aria-label="Menü öffnen" aria-expanded="false" aria-controls="app-sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <?= brandLogo() ?>
+  </header>
+  <div class="sidebar-backdrop" data-sidebar-backdrop></div>
+  <aside class="sidebar" id="app-sidebar">
     <?= brandLogo() ?>
     <h2>Familie</h2>
     <?php foreach ($members as $m): $isHidden = in_array($m['id'], $hiddenIds, true); ?>
@@ -277,7 +284,11 @@ if ($view === 'day') {
               <?php if ($view === 'week'): ?>
                 <span class="weekday-label"><?= $weekdayLabels[((int) $day->format('N')) - 1] ?></span>
               <?php endif; ?>
-              <span class="day-number"><?= (int) $day->format('j') ?></span>
+              <?php if ($view === 'month'): ?>
+                <a class="day-number" href="<?= h(buildCalendarUrl('day', $monthParam, $dayStr, $hiddenIds)) ?>"><?= (int) $day->format('j') ?></a>
+              <?php else: ?>
+                <span class="day-number"><?= (int) $day->format('j') ?></span>
+              <?php endif; ?>
               <a class="add-link" href="event_form.php?date=<?= h($dayStr) ?>&back=<?= urlencode($back) ?>" title="Termin anlegen">+</a>
             </div>
             <?php foreach ($dayEvents as $ev):
@@ -297,5 +308,39 @@ if ($view === 'day') {
     <?php endif; ?>
   </main>
 </div>
+<script>
+  // Mobile Sidebar als Off-Canvas-Drawer: nur relevant auf schmalen
+  // Bildschirmen (siehe @media (max-width: 860px) in styles.css), auf
+  // dem Desktop bleibt die Sidebar immer sichtbar und dieser Code
+  // bleibt wirkungslos (kein "open"-Klasse-Pfad wird dort erreicht).
+  (function () {
+    var toggle = document.querySelector('.sidebar-toggle');
+    var sidebar = document.getElementById('app-sidebar');
+    var backdrop = document.querySelector('[data-sidebar-backdrop]');
+    if (!toggle || !sidebar || !backdrop) return;
+
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      backdrop.classList.remove('visible');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+    function openSidebar() {
+      sidebar.classList.add('open');
+      backdrop.classList.add('visible');
+      toggle.setAttribute('aria-expanded', 'true');
+    }
+    toggle.addEventListener('click', function () {
+      if (sidebar.classList.contains('open')) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    });
+    backdrop.addEventListener('click', closeSidebar);
+    sidebar.querySelectorAll('a').forEach(function (link) {
+      link.addEventListener('click', closeSidebar);
+    });
+  })();
+</script>
 </body>
 </html>
