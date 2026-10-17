@@ -601,3 +601,22 @@ schnell unübersichtlich (einzelne Termine werden dort abgeschnitten).
   zur Monatsansicht). `back` wird vor jeder Weiterleitung über
   `sanitizeCalendarBack()` (`src/Helpers.php`) neu zusammengesetzt, da
   er aus einem Formularfeld kommt und damit potenziell manipulierbar ist.
+
+## Fix: "#1071 Specified key was too long" beim Import von schema.sql
+
+Auf manchen (meist älteren oder sehr sparsam konfigurierten) Shared-Hosting-
+MySQL-Instanzen schlägt der Import von `database/schema.sql` mit
+`#1071 - Specified key was too long; max key length is 767 bytes` fehl.
+Ursache: bei `utf8mb4` (4 Byte/Zeichen) ist ein Index auf `VARCHAR(255)`
+1020 Byte lang - über dem 767-Byte-Limit älterer InnoDB-Zeilenformate
+(COMPACT/REDUNDANT statt DYNAMIC, ohne `innodb_large_prefix`). Betroffen
+waren `users.email` (UNIQUE), `events.external_uid` (Teil einer
+zusammengesetzten UNIQUE KEY), `login_attempts.email` (normaler INDEX)
+und `schema_migrations.migration` (PRIMARY KEY) - jeweils auf 190/191
+Zeichen gekürzt (191×4 = 764 Byte, passt überall, auch ohne
+Server-Konfigurationsänderung). E-Mail-Adressen sind laut RFC 5321
+ohnehin auf 254 Zeichen begrenzt, 191 reicht in der Praxis immer.
+
+Für bereits bestehende Installationen: Migration
+`database/migrations/012_shorten_indexed_varchars.sql` einmalig
+ausführen.
