@@ -1,5 +1,13 @@
 RewriteEngine On
 
+# Manche Apache-Konfigurationen (insbesondere mit PHP-FPM via mod_proxy_fcgi)
+# reichen den Authorization-Header nicht automatisch an PHP durch - ohne das
+# hier würde jeder Bearer-Token-Check scheitern ("Nicht angemeldet"), obwohl
+# der Client den Header korrekt sendet (siehe src/Core/Request.php,
+# REDIRECT_HTTP_AUTHORIZATION-Fallback).
+RewriteCond %{HTTP:Authorization} ^(.*)
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]
+
 # Nur /api/... existiert nicht als echte Datei (z.B. /api/events/5) und wird
 # daher intern zum API-Frontcontroller umgeleitet. Alle Client-Seiten
 # (login.php, calendar.php, ...) sind echte Dateien und werden von Apache
