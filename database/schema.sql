@@ -43,7 +43,13 @@ CREATE TABLE IF NOT EXISTS families (
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
   id INT PRIMARY KEY AUTO_INCREMENT,
-  email VARCHAR(255) NOT NULL UNIQUE,
+  -- 191 statt 255: bei utf8mb4 (4 Byte/Zeichen) wäre ein UNIQUE-Index auf
+  -- VARCHAR(255) 1020 Byte lang - über dem 767-Byte-Limit älterer InnoDB-
+  -- Zeilenformate (COMPACT/REDUNDANT, wie es mancher Shared-Hosting-MySQL
+  -- noch als Default hat). 191*4=764 Byte passt überall, auch ohne
+  -- innodb_large_prefix/Barracuda. E-Mail-Adressen sind laut RFC 5321
+  -- ohnehin auf 254 Zeichen begrenzt, 191 reicht in der Praxis immer.
+  email VARCHAR(191) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   is_platform_admin TINYINT(1) NOT NULL DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -107,7 +113,10 @@ CREATE TABLE IF NOT EXISTS events (
   recurrence_parent_id INT NULL,
   category VARCHAR(100) NULL,
   source ENUM('manual','import','stream') NOT NULL DEFAULT 'manual',
-  external_uid VARCHAR(255) NULL,
+  -- 190 statt 255 (gleicher Grund wie bei users.email, siehe dort) - hier
+  -- zusätzlich 4 Byte für calendar_source_id in derselben zusammengesetzten
+  -- UNIQUE KEY eingerechnet (190*4 + 4 = 764 Byte, passt unter 767).
+  external_uid VARCHAR(190) NULL,
   calendar_source_id INT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -206,7 +215,9 @@ CREATE TABLE IF NOT EXISTS password_resets (
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS login_attempts (
   id INT PRIMARY KEY AUTO_INCREMENT,
-  email VARCHAR(255) NOT NULL,
+  -- 191 statt 255 (gleicher Grund wie bei users.email, siehe dort) - auch
+  -- ein normaler, nicht-eindeutiger INDEX unterliegt dem 767-Byte-Limit.
+  email VARCHAR(191) NOT NULL,
   ip_address VARCHAR(45) NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_email_created (email, created_at),
@@ -235,7 +246,9 @@ CREATE TABLE IF NOT EXISTS member_invites (
 -- "Selbst-Update")
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS schema_migrations (
-  migration VARCHAR(255) PRIMARY KEY,
+  -- 191 statt 255 (gleicher Grund wie bei users.email, siehe dort) -
+  -- Migrationsdateinamen sind ohnehin nie annähernd so lang.
+  migration VARCHAR(191) PRIMARY KEY,
   applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -252,7 +265,8 @@ INSERT IGNORE INTO schema_migrations (migration) VALUES
   ('008_login_attempts.sql'),
   ('009_ics_export_token.sql'),
   ('010_member_invites.sql'),
-  ('011_self_update.sql');
+  ('011_self_update.sql'),
+  ('012_shorten_indexed_varchars.sql');
 
 CREATE TABLE IF NOT EXISTS self_update_runs (
   id INT PRIMARY KEY AUTO_INCREMENT,
