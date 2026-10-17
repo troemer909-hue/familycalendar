@@ -2,16 +2,14 @@
 require_once __DIR__ . '/../src/bootstrap.php';
 requireCsrf();
 
-$apiBaseUrl = trim($_POST['api_base_url'] ?? '');
+$apiBaseUrl = defaultApiBaseUrl();
 $email = trim($_POST['email'] ?? '');
 
 if ($apiBaseUrl === '' || $email === '') {
-    header('Location: forgot_password.php?error=' . urlencode('Bitte API-Adresse und E-Mail angeben.'));
+    header('Location: forgot_password.php?error=' . urlencode('Bitte E-Mail-Adresse angeben.'));
     exit;
 }
 
-// API-Adresse merken, wie bei login_submit.php - erleichtert den
-// anschließenden Wechsel zu reset_password.php.
 saveConfig(['api_base_url' => $apiBaseUrl]);
 
 $client = new ApiClient($apiBaseUrl, null);

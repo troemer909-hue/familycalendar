@@ -25,6 +25,28 @@ require_once __DIR__ . '/Helpers.php';
 const DEFAULT_API_BASE_URL = '';
 
 /**
+ * Leitet die API-Basis-URL aus dem aktuellen Request her, wenn
+ * DEFAULT_API_BASE_URL nicht gesetzt ist - in diesem zusammengeführten
+ * Setup liegen Client und API immer auf derselben Domain (siehe oben), das
+ * manuelle Eintragen der "API-Adresse" bei jedem Login war daher reine
+ * Reibung ohne echten Nutzen. $_SERVER['HTTP_HOST'] kommt vom Client und
+ * wird NICHT für sicherheitsrelevante Entscheidungen verwendet (nur um die
+ * URL für den eigenen nachgelagerten API-Call zusammenzubauen, der ohnehin
+ * serverseitig authentifiziert/validiert wird).
+ */
+function defaultApiBaseUrl(): string
+{
+    if (DEFAULT_API_BASE_URL !== '') {
+        return DEFAULT_API_BASE_URL;
+    }
+    if (empty($_SERVER['HTTP_HOST'])) {
+        return '';
+    }
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    return $scheme . '://' . $_SERVER['HTTP_HOST'];
+}
+
+/**
  * Auth-Daten sind bewusst NICHT mehr in einer gemeinsamen Datei gespeichert
  * (das würde auf einem von mehreren Personen genutzten Server dazu führen,
  * dass sich alle gegenseitig ein-/ausloggen), sondern in der PHP-Session –

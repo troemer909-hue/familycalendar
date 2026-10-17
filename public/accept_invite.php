@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . '/../src/bootstrap.php';
-$config = loadConfig();
 $error = $_GET['error'] ?? null;
 $token = $_GET['token'] ?? '';
 ?>
@@ -13,22 +12,19 @@ $token = $_GET['token'] ?? '';
 <?= pwaHeadTags() ?>
 </head>
 <body>
-  <div class="login-wrap">
+  <div class="auth-standalone">
     <?= brandLogo('', 'login.php') ?>
     <div class="login-card">
       <h1>Einladung annehmen</h1>
-      <p class="hint-text">
+      <p class="hint-text card-intro">
         Trage den Code bzw. Link aus der E-Mail sowie dein gewünschtes
         Passwort ein - danach bist du direkt angemeldet.
       </p>
 
       <form method="post" action="accept_invite_submit.php">
         <?= csrfField() ?>
-        <label>API-Adresse des Backends</label>
-        <input type="text" name="api_base_url" value="<?= h($config['api_base_url']) ?>" placeholder="https://family.eastcon.eu" required />
-
         <label>Code aus der E-Mail</label>
-        <input type="text" name="token" value="<?= h($token) ?>" required />
+        <input type="text" name="token" value="<?= h($token) ?>" required autofocus />
 
         <label>Passwort (min. 8 Zeichen)</label>
         <input type="password" name="password" minlength="8" required />
@@ -45,6 +41,9 @@ $token = $_GET['token'] ?? '';
 
       <p class="switch-link"><a href="login.php">Zurück zur Anmeldung</a></p>
     </div>
+    <footer class="auth-footer">
+      <a href="impressum.php">Impressum</a><span class="sep">·</span><a href="datenschutz.php">Datenschutz</a>
+    </footer>
   </div>
 </body>
 </html>

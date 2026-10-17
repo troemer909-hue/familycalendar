@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../src/bootstrap.php';
 requireCsrf();
 
-$apiBaseUrl = trim($_POST['api_base_url'] ?? '');
+$apiBaseUrl = defaultApiBaseUrl();
 $familyName = trim($_POST['family_name'] ?? '');
 $adminName = trim($_POST['admin_name'] ?? '');
 $email = trim($_POST['email'] ?? '');
