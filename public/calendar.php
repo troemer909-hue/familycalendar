@@ -164,30 +164,54 @@ if ($view === 'day') {
       </a>
     <?php endforeach; ?>
 
-    <p style="margin-top:20px;">
-      <a href="members.php" class="btn btn-secondary btn-block">Mitglieder verwalten</a>
-    </p>
-    <p>
-      <a href="calendar_sources.php" class="btn btn-secondary btn-block">Kalenderquellen verwalten</a>
-    </p>
-    <p>
-      <a href="push_subscribe.php" class="btn btn-secondary btn-block">Push-Benachrichtigungen</a>
-    </p>
-    <p>
-      <a href="notification_settings.php" class="btn btn-secondary btn-block">Benachrichtigungseinstellungen</a>
-    </p>
-    <p>
-      <a href="ics_export.php" class="btn btn-secondary btn-block">Kalender-Abo (ICS-Export)</a>
-    </p>
-    <p>
-      <a href="admin_families.php" class="btn btn-secondary btn-block">Plattform-Verwaltung</a>
-    </p>
-    <p>
-      <a href="self_update.php" class="btn btn-secondary btn-block">Selbst-Update</a>
-    </p>
-    <p>
-      <a href="logout.php" class="hint-text">Abmelden</a>
-    </p>
+    <nav class="sidebar-nav">
+      <div class="nav-group">
+        <span class="nav-group-label">Kalender</span>
+        <a href="members.php" class="nav-link">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 5 18.5V20"/><circle cx="9.5" cy="8" r="3.2"/><path d="M15.5 8.2a2.8 2.8 0 1 1 1.9 5"/><path d="M19.5 20v-1.3a3 3 0 0 0-2-2.8"/></svg>
+          <span>Mitglieder verwalten</span>
+        </a>
+        <a href="calendar_sources.php" class="nav-link">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12a8 8 0 0 1 14.6-4.6M20 12a8 8 0 0 1-14.6 4.6"/><path d="M18.6 3.4V8h-4.6M5.4 20.6V16H10"/></svg>
+          <span>Kalenderquellen verwalten</span>
+        </a>
+        <a href="ics_export.php" class="nav-link">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          <span>Kalender-Abo (ICS-Export)</span>
+        </a>
+      </div>
+
+      <div class="nav-group">
+        <span class="nav-group-label">Benachrichtigungen</span>
+        <a href="push_subscribe.php" class="nav-link">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 1 0-12 0c0 4-1.5 6-2 7h16c-.5-1-2-3-2-7"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
+          <span>Push-Benachrichtigungen</span>
+        </a>
+        <a href="notification_settings.php" class="nav-link">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l1.8-1.4-2-3.4-2.1.7a7.7 7.7 0 0 0-2.6-1.5L14 2.5h-4l-.5 2.4a7.7 7.7 0 0 0-2.6 1.5l-2.1-.7-2 3.4L4.6 10.5a7.6 7.6 0 0 0 0 3l-1.8 1.4 2 3.4 2.1-.7a7.7 7.7 0 0 0 2.6 1.5l.5 2.4h4l.5-2.4a7.7 7.7 0 0 0 2.6-1.5l2.1.7 2-3.4z"/></svg>
+          <span>Benachrichtigungseinstellungen</span>
+        </a>
+      </div>
+
+      <div class="nav-group">
+        <span class="nav-group-label">Verwaltung</span>
+        <a href="admin_families.php" class="nav-link">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4 6v6c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9V6z"/></svg>
+          <span>Plattform-Verwaltung</span>
+        </a>
+        <a href="self_update.php" class="nav-link">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12a8 8 0 0 1 14.6-4.6M20 12a8 8 0 0 1-14.6 4.6"/><path d="M18.6 3.4V8h-4.6M5.4 20.6V16H10"/></svg>
+          <span>Selbst-Update</span>
+        </a>
+      </div>
+
+      <div class="nav-group nav-group-footer">
+        <a href="logout.php" class="nav-link nav-link-muted">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+          <span>Abmelden</span>
+        </a>
+      </div>
+    </nav>
   </aside>
 
   <main class="main-area">
