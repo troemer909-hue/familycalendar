@@ -10,7 +10,11 @@ handleForbidden($statusRes);
 $status = $statusRes['ok'] ? $statusRes['data'] : null;
 $statusError = $statusRes['ok'] ? null : ($statusRes['data']['error'] ?? 'Status konnte nicht geladen werden.');
 
-$error = $_GET['error'] ?? null;
+// Fehlermeldung aus self_update_run.php kommt bewusst aus der Session statt
+// aus der URL (siehe dort) - einmal auslesen und sofort wieder entfernen
+// (Flash-Message-Muster), damit sie nicht bei einem Reload erneut erscheint.
+$error = $_SESSION['self_update_error'] ?? null;
+unset($_SESSION['self_update_error']);
 $notice = $_GET['notice'] ?? null;
 ?>
 <!DOCTYPE html>
