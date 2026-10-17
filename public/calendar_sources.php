@@ -36,6 +36,7 @@ $statusLabels = [
 </head>
 <body>
 <div class="main-area">
+  <div class="page-header"><?= brandLogo() ?></div>
   <div class="form-card" style="max-width:720px;">
     <h1>Kalenderquellen</h1>
     <p class="hint-text">

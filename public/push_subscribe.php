@@ -19,6 +19,7 @@ $vapidPublicKey = $pushConfigured ? ($vapidRes['data']['publicKey'] ?? null) : n
 </head>
 <body>
 <div class="main-area">
+  <div class="page-header"><?= brandLogo() ?></div>
   <div class="form-card" style="max-width:560px;">
     <h1>Push-Benachrichtigungen</h1>
     <p class="hint-text">

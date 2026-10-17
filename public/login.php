@@ -14,8 +14,9 @@ $notice = $_GET['notice'] ?? null;
 </head>
 <body>
   <div class="login-wrap">
+    <?= brandLogo('', 'login.php') ?>
     <div class="login-card">
-      <h1>📅 Familienkalender</h1>
+      <h1>Familienkalender</h1>
 
       <form method="post" action="login_submit.php">
         <?= csrfField() ?>

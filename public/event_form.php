@@ -86,6 +86,7 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
 </head>
 <body>
 <div class="main-area">
+  <div class="page-header"><?= brandLogo() ?></div>
   <div class="form-card">
     <h1><?= $event ? 'Termin bearbeiten' : 'Neuer Termin' ?></h1>
 

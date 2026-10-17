@@ -31,6 +31,7 @@ $notice = $_GET['notice'] ?? null;
 </head>
 <body>
 <div class="main-area">
+  <div class="page-header"><?= brandLogo() ?></div>
   <div class="form-card" style="max-width:640px;">
     <h1>Kalender-Abo (ICS-Export)</h1>
     <p class="hint-text">

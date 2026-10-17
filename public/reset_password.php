@@ -14,8 +14,9 @@ $token = $_GET['token'] ?? '';
 </head>
 <body>
   <div class="login-wrap">
+    <?= brandLogo('', 'login.php') ?>
     <div class="login-card">
-      <h1>📅 Passwort zurücksetzen</h1>
+      <h1>Passwort zurücksetzen</h1>
       <p class="hint-text">
         Trage den Code bzw. Link aus der E-Mail sowie dein neues Passwort ein.
       </p>

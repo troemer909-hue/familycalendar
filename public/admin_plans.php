@@ -23,6 +23,7 @@ $notice = $_GET['notice'] ?? null;
 </head>
 <body>
 <div class="main-area">
+  <div class="page-header"><?= brandLogo() ?></div>
   <div class="form-card" style="max-width:900px;">
     <h1>Pläne</h1>
     <p class="hint-text">
