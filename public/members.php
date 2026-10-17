@@ -61,7 +61,7 @@ $notice = $_GET['notice'] ?? null;
         </div>
         <div>
           <label>Farbe</label>
-          <input type="text" name="display_color" value="#94a3b8" placeholder="#94a3b8" />
+          <input type="color" name="display_color" value="#94a3b8" class="color-input" />
         </div>
         <div>
           <label>Geburtsjahr (optional)</label>
