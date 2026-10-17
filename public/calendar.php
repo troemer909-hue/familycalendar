@@ -179,12 +179,11 @@ if ($view === 'day') {
     <p>
       <a href="ics_export.php" class="btn btn-secondary btn-block">Kalender-Abo (ICS-Export)</a>
     </p>
+    <?php if (isPlatformAdmin()): ?>
     <p>
       <a href="admin_families.php" class="btn btn-secondary btn-block">Plattform-Verwaltung</a>
     </p>
-    <p>
-      <a href="self_update.php" class="btn btn-secondary btn-block">Selbst-Update</a>
-    </p>
+    <?php endif; ?>
     <p>
       <a href="logout.php" class="hint-text">Abmelden</a>
     </p>

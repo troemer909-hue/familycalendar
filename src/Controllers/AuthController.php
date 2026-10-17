@@ -108,7 +108,7 @@ final class AuthController
         }
 
         $db = Database::connection();
-        $stmt = $db->prepare('SELECT id, password_hash FROM users WHERE email = :email');
+        $stmt = $db->prepare('SELECT id, password_hash, is_platform_admin FROM users WHERE email = :email');
         $stmt->execute(['email' => $email]);
         $user = $stmt->fetch();
 
@@ -126,7 +126,15 @@ final class AuthController
             'exp' => time() + 60 * 60 * 24 * 30,
         ]);
 
-        Response::json(['token' => $token]);
+        // is_platform_admin wird hier NUR fürs client-seitige Ein-/Ausblenden
+        // des "Plattform-Verwaltung"-Menüpunkts mitgegeben (public/bootstrap.php
+        // cached das in der Session) - die eigentliche Berechtigungsprüfung
+        // bleibt serverseitig bei TenantContext::requirePlatformAdmin() auf
+        // jedem /api/admin/...-Aufruf, unabhängig davon, was der Client zeigt.
+        Response::json([
+            'token' => $token,
+            'is_platform_admin' => (bool) $user['is_platform_admin'],
+        ]);
     }
 
     /**

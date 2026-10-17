@@ -40,6 +40,9 @@ $notice = $_GET['notice'] ?? null;
       Plattform. Reine Status-Pflege (kein Zahlungsabwicklungs-Flow) -
       siehe <a href="admin_plans.php">Pläne verwalten</a>.
     </p>
+    <p>
+      <a href="self_update.php" class="btn btn-secondary">Selbst-Update</a>
+    </p>
 
     <?php if ($notice): ?><p class="success-box"><?= h($notice) ?></p><?php endif; ?>
     <?php if ($error): ?><p class="error-box"><?= h($error) ?></p><?php endif; ?>
