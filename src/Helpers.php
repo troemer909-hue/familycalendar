@@ -27,6 +27,22 @@ function pwaHeadTags(): string
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,380;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800&display=swap" />
+  <script>
+    // Chrome/Android verlangt für den automatischen "App installieren"-
+    // Hinweis (beforeinstallprompt) einen bereits registrierten, aktiven
+    // Service Worker - vorher wurde der nur auf push_subscribe.php
+    // registriert, die kaum jemand besucht, bevor er/sie die App
+    // installieren will. Hier auf JEDER Seite registriert, damit die
+    // Installierbarkeits-Kriterien schon beim ersten Besuch erfüllt sind.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js').catch(function () {
+          // Kein harter Fehler - ohne Service Worker läuft die App normal
+          // weiter, nur die Installierbarkeit als PWA fehlt dann.
+        });
+      });
+    }
+  </script>
 HTML;
 }
 

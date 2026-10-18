@@ -74,6 +74,7 @@ a:hover { text-decoration: underline; }
 
 .auth-content {
   flex: 1;
+  min-width: 0; /* sonst erzwingt login-cards feste width:380px eine Mindestbreite des Flex-Items und sprengt den Viewport (seitlich verschiebbar auf dem Handy) */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -190,6 +191,56 @@ button, .btn {
   z-index: 40;
 }
 .sidebar-backdrop.visible { display: block; }
+
+/* Schwebender "+"-Button (FAB) unten rechts, wie in Google Kalender -
+   nur auf schmalen Bildschirmen sichtbar (siehe @media unten); am
+   Desktop übernimmt weiterhin der "+ Neuer Termin"-Button im Toolbar. */
+.mobile-fab {
+  display: none;
+  position: fixed;
+  right: 18px;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--teal);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(35, 143, 168, .45);
+  z-index: 35;
+}
+.mobile-fab svg { width: 26px; height: 26px; }
+
+/* Footer-Tabbar, wie bei den meisten mobilen Kalender-Apps - nur auf
+   schmalen Bildschirmen sichtbar (siehe @media unten). */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 35;
+  background: #fff;
+  border-top: 1px solid #e5e7ec;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 1;
+  padding: 8px 4px 6px;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+}
+.bottom-nav-item .nav-icon { width: 22px; height: 22px; margin: 0; }
+.bottom-nav-item.active { color: var(--teal); }
 
 .sidebar { width: 230px; background: #fff; border-right: 1px solid #e5e7ec; padding: 20px 16px; }
 .sidebar .brand { margin-bottom: 20px; }
@@ -353,14 +404,24 @@ button, .btn {
      Topbar - spart Platz im schmalen Drawer. */
   .sidebar > .brand:first-child { display: none; }
 
-  .main-area { padding: 16px; }
+  /* Platz unten für die fixierte Footer-Tabbar freihalten, damit der
+     letzte Wocheneintrag/Kalendertag nicht dahinter verschwindet. */
+  .main-area { padding: 16px 16px calc(72px + env(safe-area-inset-bottom, 0)); }
 
   .toolbar { gap: 12px; }
   .month-nav { flex: 1 1 100%; justify-content: space-between; }
   #current-month-label { min-width: 0; flex: 1; text-align: center; font-size: 16px; }
   .view-switch { flex: 1 1 auto; }
   .view-switch a { flex: 1; text-align: center; padding: 8px 10px; }
-  .toolbar > .btn-primary { flex: 1 1 100%; text-align: center; }
+  /* "+ Neuer Termin" im Toolbar weicht auf dem Handy dem schwebenden
+     FAB-Button unten rechts (siehe .mobile-fab) - Google-Kalender-
+     Muster statt eines sperrigen volle-Breite-Buttons im Toolbar. */
+  .toolbar-add { display: none; }
+  .mobile-fab {
+    display: flex;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0));
+  }
+  .mobile-bottom-nav { display: flex; }
 
   /* Touch-Targets auf min. ~44px anheben (Apple/Google-Empfehlung) -
      auf dem Desktop bleibt die kompaktere Größe, da dort mit Maus/
@@ -407,6 +468,23 @@ button, .btn {
   .calendar-grid:not(.view-week) .day-header { gap: 2px; }
   .calendar-grid:not(.view-week) .day-number { font-size: 11px; padding: 1px; }
   .calendar-grid:not(.view-week) .add-link { display: none; }
+
+  /* "Heute" wie in Google Kalender: ein ausgefüllter Kreis um die
+     Tageszahl statt eines Rahmens um die ganze Zelle - dezenter und
+     im Punkt-Raster (siehe .event-chip oben) besser lesbar. */
+  .calendar-day.today { border: none; }
+  .calendar-grid:not(.view-week) .calendar-day.today .day-number,
+  .calendar-grid.view-week .calendar-day.today .day-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 4px;
+    border-radius: 50%;
+    background: var(--teal);
+    color: #fff;
+  }
   .calendar-grid:not(.view-week) .event-chip {
     display: inline-block;
     width: 6px;
