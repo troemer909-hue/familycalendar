@@ -35,8 +35,7 @@ $statusLabels = [
 <?= pwaHeadTags() ?>
 </head>
 <body>
-<div class="main-area">
-  <div class="page-header"><?= brandLogo() ?></div>
+<?= appChromeOpen('sources') ?>
   <div class="form-card" style="max-width:720px;">
     <h1>Kalenderquellen</h1>
     <p class="hint-text">
@@ -150,6 +149,6 @@ $statusLabels = [
       </div>
     </form>
   </div>
-</div>
+<?= appChromeClose('sources') ?>
 </body>
 </html>

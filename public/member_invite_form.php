@@ -33,8 +33,7 @@ if (!$target) {
 <?= pwaHeadTags() ?>
 </head>
 <body>
-<div class="main-area">
-  <div class="page-header"><?= brandLogo() ?></div>
+<?= appChromeOpen('members') ?>
   <div class="form-card">
     <h1>Einladen</h1>
     <p class="hint-text">
@@ -58,6 +57,6 @@ if (!$target) {
       </div>
     </form>
   </div>
-</div>
+<?= appChromeClose('members') ?>
 </body>
 </html>

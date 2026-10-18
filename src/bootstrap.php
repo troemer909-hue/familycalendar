@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-// Session-Cookie-Lebensdauer: 30 Tage, damit man nicht bei jedem Browser-
-// Neustart neu einloggen muss (an die Token-Gültigkeit im Backend angeglichen).
-// Muss VOR session_start() gesetzt werden.
+// Session-Cookie-Lebensdauer: an Token::LONG_LIVED_SECONDS angeglichen -
+// Nutzer sollen dauerhaft angemeldet bleiben, nicht alle paar Wochen neu
+// einloggen müssen (Literal statt Konstante, weil dieser Codeblock VOR
+// dem Laden der Klassen laufen muss, siehe session_start() unten).
 session_set_cookie_params([
-    'lifetime' => 60 * 60 * 24 * 30,
+    'lifetime' => 60 * 60 * 24 * 365 * 10,
     'path' => '/',
     'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
     'httponly' => true,

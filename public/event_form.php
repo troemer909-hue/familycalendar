@@ -85,8 +85,7 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
 <?= pwaHeadTags() ?>
 </head>
 <body>
-<div class="main-area">
-  <div class="page-header"><?= brandLogo() ?></div>
+<?= appChromeOpen('calendar') ?>
   <div class="form-card">
     <h1><?= $event ? 'Termin bearbeiten' : 'Neuer Termin' ?></h1>
 
@@ -236,6 +235,6 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
       </form>
     <?php endif; ?>
   </div>
-</div>
+<?= appChromeClose('calendar') ?>
 </body>
 </html>

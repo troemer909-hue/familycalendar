@@ -147,83 +147,28 @@ if ($view === 'day') {
 <?= pwaHeadTags() ?>
 </head>
 <body>
-<div class="app-layout">
-  <header class="mobile-topbar">
-    <button type="button" class="sidebar-toggle" data-sidebar-trigger aria-label="Menü öffnen" aria-expanded="false" aria-controls="app-sidebar">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-    </button>
-    <?= brandLogo() ?>
-  </header>
-  <div class="sidebar-backdrop" data-sidebar-backdrop></div>
-  <aside class="sidebar" id="app-sidebar">
-    <?= brandLogo() ?>
-    <h2>Familie</h2>
-    <?php foreach ($members as $m): $isHidden = in_array($m['id'], $hiddenIds, true); ?>
-      <?php
-        $newHidden = $isHidden
-          ? array_diff($hiddenIds, [$m['id']])
-          : array_merge($hiddenIds, [$m['id']]);
-      ?>
-      <a href="<?= h(buildCalendarUrl($view, $monthParam, $dateParam, $newHidden)) ?>" style="text-decoration:none;color:inherit;">
-        <div class="member-chip<?= $isHidden ? ' inactive' : '' ?>">
-          <span class="dot" style="background:<?= h($m['display_color']) ?>"></span>
-          <span><?= h($m['display_name']) ?></span>
-        </div>
-      </a>
-    <?php endforeach; ?>
-
-    <nav class="sidebar-nav">
-      <div class="nav-group">
-        <span class="nav-group-label">Kalender</span>
-        <a href="members.php" class="nav-link">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 5 18.5V20"/><circle cx="9.5" cy="8" r="3.2"/><path d="M15.5 8.2a2.8 2.8 0 1 1 1.9 5"/><path d="M19.5 20v-1.3a3 3 0 0 0-2-2.8"/></svg>
-          <span>Mitglieder verwalten</span>
-        </a>
-        <a href="calendar_sources.php" class="nav-link">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12a8 8 0 0 1 14.6-4.6M20 12a8 8 0 0 1-14.6 4.6"/><path d="M18.6 3.4V8h-4.6M5.4 20.6V16H10"/></svg>
-          <span>Kalenderquellen verwalten</span>
-        </a>
-        <a href="ics_export.php" class="nav-link">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-          <span>Kalender-Abo (ICS-Export)</span>
-        </a>
+<?php
+// Mitglieder-Sichtbarkeitsfilter (Farbpunkte zum Ein-/Ausblenden) - nur
+// auf calendar.php relevant, daher hier statt in appChromeOpen() selbst
+// gebaut und als zusätzlicher Sidebar-Inhalt übergeben (siehe Helpers.php).
+ob_start();
+foreach ($members as $m):
+    $isHidden = in_array($m['id'], $hiddenIds, true);
+    $newHidden = $isHidden ? array_diff($hiddenIds, [$m['id']]) : array_merge($hiddenIds, [$m['id']]);
+    ?>
+    <a href="<?= h(buildCalendarUrl($view, $monthParam, $dateParam, $newHidden)) ?>" style="text-decoration:none;color:inherit;">
+      <div class="member-chip<?= $isHidden ? ' inactive' : '' ?>">
+        <span class="dot" style="background:<?= h($m['display_color']) ?>"></span>
+        <span><?= h($m['display_name']) ?></span>
       </div>
+    </a>
+    <?php
+endforeach;
+$memberChipsHtml = '<h2>Familie</h2>' . ob_get_clean();
 
-      <div class="nav-group">
-        <span class="nav-group-label">Benachrichtigungen</span>
-        <a href="push_subscribe.php" class="nav-link">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 1 0-12 0c0 4-1.5 6-2 7h16c-.5-1-2-3-2-7"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
-          <span>Push-Benachrichtigungen</span>
-        </a>
-        <a href="notification_settings.php" class="nav-link">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l1.8-1.4-2-3.4-2.1.7a7.7 7.7 0 0 0-2.6-1.5L14 2.5h-4l-.5 2.4a7.7 7.7 0 0 0-2.6 1.5l-2.1-.7-2 3.4L4.6 10.5a7.6 7.6 0 0 0 0 3l-1.8 1.4 2 3.4 2.1-.7a7.7 7.7 0 0 0 2.6 1.5l.5 2.4h4l.5-2.4a7.7 7.7 0 0 0 2.6-1.5l2.1.7 2-3.4z"/></svg>
-          <span>Benachrichtigungseinstellungen</span>
-        </a>
-      </div>
-
-      <?php if (isPlatformAdmin()): ?>
-      <div class="nav-group">
-        <span class="nav-group-label">Verwaltung</span>
-        <a href="admin_families.php" class="nav-link">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4 6v6c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9V6z"/></svg>
-          <span>Plattform-Verwaltung</span>
-        </a>
-      </div>
-      <?php endif; ?>
-
-      <div class="nav-group nav-group-footer">
-        <a href="logout.php" class="nav-link nav-link-muted">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
-          <span>Abmelden</span>
-        </a>
-        <p class="legal-links">
-          <a href="impressum.php">Impressum</a><span class="sep">·</span><a href="datenschutz.php">Datenschutz</a>
-        </p>
-      </div>
-    </nav>
-  </aside>
-
-  <main class="main-area" data-swipe-nav data-prev-url="<?= h($prevUrl) ?>" data-next-url="<?= h($nextUrl) ?>">
+$mainAttrs = 'data-swipe-nav data-prev-url="' . h($prevUrl) . '" data-next-url="' . h($nextUrl) . '"';
+echo appChromeOpen('calendar', $memberChipsHtml, $mainAttrs);
+?>
     <div class="toolbar">
       <div class="month-nav">
         <a class="btn" href="<?= h($prevUrl) ?>">‹</a>
@@ -310,100 +255,6 @@ if ($view === 'day') {
     <a class="mobile-fab" href="event_form.php?date=<?= h($dateParam) ?>&back=<?= urlencode($back) ?>" aria-label="Neuer Termin">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
     </a>
-  </main>
-</div>
-
-<nav class="mobile-bottom-nav">
-  <a href="calendar.php" class="bottom-nav-item active">
-    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-    <span>Kalender</span>
-  </a>
-  <a href="members.php" class="bottom-nav-item">
-    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 5 18.5V20"/><circle cx="9.5" cy="8" r="3.2"/><path d="M15.5 8.2a2.8 2.8 0 1 1 1.9 5"/><path d="M19.5 20v-1.3a3 3 0 0 0-2-2.8"/></svg>
-    <span>Familie</span>
-  </a>
-  <a href="calendar_sources.php" class="bottom-nav-item">
-    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12a8 8 0 0 1 14.6-4.6M20 12a8 8 0 0 1-14.6 4.6"/><path d="M18.6 3.4V8h-4.6M5.4 20.6V16H10"/></svg>
-    <span>Quellen</span>
-  </a>
-  <button type="button" class="bottom-nav-item" data-sidebar-trigger aria-label="Menü öffnen">
-    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="6" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18" r="1.6"/></svg>
-    <span>Mehr</span>
-  </button>
-</nav>
-
-<script>
-  // Mobile Sidebar als Off-Canvas-Drawer: nur relevant auf schmalen
-  // Bildschirmen (siehe @media (max-width: 860px) in styles.css), auf
-  // dem Desktop bleibt die Sidebar immer sichtbar und dieser Code
-  // bleibt wirkungslos (kein "open"-Klasse-Pfad wird dort erreicht).
-  (function () {
-    // Zwei Trigger öffnen denselben Drawer: der Hamburger in der
-    // Topbar (nur bei engem Viewport sichtbar) und der "Mehr"-Eintrag
-    // im Footer-Menü (siehe unten) - beide tragen [data-sidebar-trigger].
-    var triggers = document.querySelectorAll('[data-sidebar-trigger]');
-    var sidebar = document.getElementById('app-sidebar');
-    var backdrop = document.querySelector('[data-sidebar-backdrop]');
-    if (!triggers.length || !sidebar || !backdrop) return;
-
-    function setExpanded(value) {
-      triggers.forEach(function (t) { t.setAttribute('aria-expanded', value); });
-    }
-    function closeSidebar() {
-      sidebar.classList.remove('open');
-      backdrop.classList.remove('visible');
-      setExpanded('false');
-    }
-    function openSidebar() {
-      sidebar.classList.add('open');
-      backdrop.classList.add('visible');
-      setExpanded('true');
-    }
-    triggers.forEach(function (trigger) {
-      trigger.addEventListener('click', function () {
-        if (sidebar.classList.contains('open')) {
-          closeSidebar();
-        } else {
-          openSidebar();
-        }
-      });
-    });
-    backdrop.addEventListener('click', closeSidebar);
-    sidebar.querySelectorAll('a').forEach(function (link) {
-      link.addEventListener('click', closeSidebar);
-    });
-  })();
-
-  // Wischgeste (links/rechts) zum Wechseln zum vorherigen/nächsten
-  // Monat, Woche oder Tag - wie in Google Kalender. Reagiert nur auf
-  // überwiegend horizontale Wischbewegungen über einer Mindestdistanz,
-  // damit normales vertikales Scrollen der Seite unangetastet bleibt
-  // (kein preventDefault auf touchmove).
-  (function () {
-    var area = document.querySelector('[data-swipe-nav]');
-    if (!area) return;
-    var startX = null;
-    var startY = null;
-    var THRESHOLD = 60;
-
-    area.addEventListener('touchstart', function (e) {
-      if (e.touches.length !== 1) return;
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-    }, { passive: true });
-
-    area.addEventListener('touchend', function (e) {
-      if (startX === null) return;
-      var endX = e.changedTouches[0].clientX;
-      var endY = e.changedTouches[0].clientY;
-      var dx = endX - startX;
-      var dy = endY - startY;
-      startX = null;
-      if (Math.abs(dx) < THRESHOLD || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-      var url = dx < 0 ? area.dataset.nextUrl : area.dataset.prevUrl;
-      if (url) window.location.href = url;
-    }, { passive: true });
-  })();
-</script>
+<?= appChromeClose('calendar') ?>
 </body>
 </html>

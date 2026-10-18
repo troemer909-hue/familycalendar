@@ -34,8 +34,7 @@ $priceValue = $plan['price_monthly'] ?? '0.00';
 <?= pwaHeadTags() ?>
 </head>
 <body>
-<div class="main-area">
-  <div class="page-header"><?= brandLogo() ?></div>
+<?= appChromeOpen('admin') ?>
   <div class="form-card">
     <h1><?= $plan ? 'Plan bearbeiten' : 'Neuer Plan' ?></h1>
 
@@ -67,6 +66,6 @@ $priceValue = $plan['price_monthly'] ?? '0.00';
       </div>
     </form>
   </div>
-</div>
+<?= appChromeClose('admin') ?>
 </body>
 </html>

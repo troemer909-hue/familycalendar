@@ -27,8 +27,7 @@ $error = $_GET['error'] ?? null;
 <?= pwaHeadTags() ?>
 </head>
 <body>
-<div class="main-area">
-  <div class="page-header"><?= brandLogo() ?></div>
+<?= appChromeOpen('notifications') ?>
   <div class="form-card" style="max-width:560px;">
     <h1>Benachrichtigungseinstellungen</h1>
     <p class="hint-text">
@@ -86,6 +85,6 @@ $error = $_GET['error'] ?? null;
       </p>
     </form>
   </div>
-</div>
+<?= appChromeClose('notifications') ?>
 </body>
 </html>

@@ -18,8 +18,7 @@ $notice = $_GET['notice'] ?? null;
 <?= pwaHeadTags() ?>
 </head>
 <body>
-<div class="main-area">
-  <div class="page-header"><?= brandLogo() ?></div>
+<?= appChromeOpen('members') ?>
   <div class="form-card" style="max-width:560px;">
     <h1>Familienmitglieder</h1>
 
@@ -76,6 +75,6 @@ $notice = $_GET['notice'] ?? null;
       </div>
     </form>
   </div>
-</div>
+<?= appChromeClose('members') ?>
 </body>
 </html>
