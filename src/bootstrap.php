@@ -16,6 +16,16 @@ session_start();
 
 require_once __DIR__ . '/ApiClient.php';
 require_once __DIR__ . '/Helpers.php';
+require_once __DIR__ . '/autoload.php';
+require_once __DIR__ . '/apiRoutes.php';
+require_once __DIR__ . '/LocalApiClient.php';
+
+// Für LocalApiClient nötig (Datenbank-Zugangsdaten, APP_SECRET für
+// Token::verify() etc.) - bisher lud nur public/api.php die .env-Datei,
+// weil Client-Seiten nie direkt auf Datenbank/Token zugegriffen haben
+// (siehe LocalApiClient-Klassendoc). Env::load() ist idempotent, ein
+// zweiter Aufruf aus public/api.php selbst bleibt also folgenlos.
+\Familienkalender\Core\Env::load(dirname(__DIR__) . '/.env');
 
 // In diesem zusammengeführten Setup liegen API (/api/...) und Client
 // (login.php, calendar.php, ...) auf DERSELBEN Domain. Hier die eigene
@@ -105,10 +115,30 @@ function isPlatformAdmin(): bool
     return (bool) loadConfig()['is_platform_admin'];
 }
 
-function currentApiClient(): ApiClient
+/**
+ * Wählt zwischen LocalApiClient (Normalfall: Client-Seite und API laufen
+ * im selben PHP-Prozess - direkter In-Process-Aufruf statt HTTP-Self-Call,
+ * siehe LocalApiClient-Klassendoc) und ApiClient (echter HTTP-Call, nötig
+ * wenn $apiBaseUrl explizit von der eigenen Domain abweicht - aktuell
+ * ausschließlich die Integrationstest-Infrastruktur, siehe
+ * resolveApiBaseUrl()). Der Vergleich gegen defaultApiBaseUrl() erkennt
+ * genau diesen Fall, ohne dass die Aufrufer (currentApiClient() unten,
+ * die *_submit.php-Skripte) das Unterscheidungskriterium selbst kennen
+ * müssen.
+ */
+function apiClientFor(string $apiBaseUrl, ?string $token): ApiClient|LocalApiClient
+{
+    if ($apiBaseUrl !== '' && $apiBaseUrl !== defaultApiBaseUrl()) {
+        return new ApiClient($apiBaseUrl, $token);
+    }
+
+    return new LocalApiClient($token);
+}
+
+function currentApiClient(): ApiClient|LocalApiClient
 {
     $config = loadConfig();
-    return new ApiClient($config['api_base_url'] ?? '', $config['token'] ?? null);
+    return apiClientFor((string) ($config['api_base_url'] ?? ''), $config['token'] ?? null);
 }
 
 function requireLogin(): void

@@ -14,3 +14,25 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]
 # ganz normal direkt ausgeliefert - hier greift KEINE Rewrite-Regel.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^api/(.*)$ api.php [QSA,L]
+
+# Statische Assets (CSS, Icons, Service Worker, Manifest) ändern sich nur
+# bei einem Deploy/Self-Update, nicht zwischen zwei Seitenaufrufen - ohne
+# Cache-Header fragt der Browser bei JEDEM Seitenaufruf erneut danach statt
+# sie eine Weile lokal zu behalten. manifest.json/sw.js bewusst kurz
+# gehalten (Service-Worker-Updates sollen zeitnah ankommen, nicht erst nach
+# einer Woche), styles.css/Icons länger.
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 1 week"
+  ExpiresByType image/png "access plus 1 week"
+  ExpiresByType application/manifest+json "access plus 1 hour"
+  ExpiresByType application/javascript "access plus 1 hour"
+</IfModule>
+<IfModule mod_headers.c>
+  <FilesMatch "\.(css|png)$">
+    Header set Cache-Control "public, max-age=604800"
+  </FilesMatch>
+  <FilesMatch "\.(js|json)$">
+    Header set Cache-Control "public, max-age=3600"
+  </FilesMatch>
+</IfModule>

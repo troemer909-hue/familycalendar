@@ -26,7 +26,14 @@ function pwaHeadTags(): string
   <meta name="apple-mobile-web-app-title" content="Family-Kalender" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,380;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800&display=swap" />
+  <!-- Nicht-blockierendes Nachladen: media="print" verhindert, dass der
+       Browser auf diese externe Schriftart warten muss, bevor er
+       überhaupt etwas zeigt (vorher ein render-blockierender <link
+       rel="stylesheet">, der jede Seite auf eine Antwort von
+       fonts.googleapis.com warten ließ). onload schaltet auf "all" um,
+       sobald die Datei da ist; <noscript> sichert den Fall ohne JS ab. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,380;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800&display=swap" media="print" onload="this.media='all'" />
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,380;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800&display=swap" /></noscript>
   <script>
     // Chrome/Android verlangt für den automatischen "App installieren"-
     // Hinweis (beforeinstallprompt) einen bereits registrierten, aktiven
