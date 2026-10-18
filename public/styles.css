@@ -247,12 +247,31 @@ button, .btn {
 .sidebar .brand .mark { width: 30px; height: 30px; }
 .sidebar .brand .word { font-size: 15px; }
 
-.install-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
+/* Installations-Banner ganz oben auf der Seite (siehe appChromeOpen() in
+   Helpers.php) statt eines Menü-Eintrags - erscheint beim Öffnen im
+   Browser, verschwindet automatisch sobald die App bereits installiert
+   ist. */
+.install-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, var(--warm-1), var(--warm-2));
+  color: #fff;
+}
 /* Das [hidden]-Attribut allein reicht nicht: "button, .btn { display:
    inline-block }" (siehe oben) hat dieselbe Spezifität wie die
    UA-Regel für [hidden] und gewinnt per Ladereihenfolge - ohne diese
-   Regel bliebe der Button entgegen dem hidden-Attribut immer sichtbar. */
-.install-btn[hidden] { display: none; }
+   Regel bliebe der Banner entgegen dem hidden-Attribut immer sichtbar. */
+.install-banner[hidden] { display: none; }
+.install-banner-text { flex: 1; font-size: 13px; font-weight: 500; }
+.install-banner-btn { flex: none; background: #fff; color: var(--warm-3); white-space: nowrap; }
+.install-banner-btn:hover { background: #fff; opacity: .9; }
+.install-banner-dismiss {
+  flex: none; background: none; border: none; color: #fff; font-size: 22px;
+  line-height: 1; padding: 0 4px; cursor: pointer; opacity: .85;
+}
+.install-banner-dismiss:hover { opacity: 1; }
 
 .page-header { margin-bottom: 20px; }
 .sidebar h2 { font-size: 14px; text-transform: uppercase; color: #94a3b8; margin: 0 0 12px; }
@@ -517,16 +536,24 @@ button, .btn {
   .event-chip { font-size: 10px; padding: 2px 5px; }
   .day-event-time { min-width: 72px; font-size: 11px; }
 
-  /* Stunden-Zeitraster: Tagesspalten dürfen schmaler werden, aber nicht
-     unlesbar - das ganze Raster scrollt dann horizontal (wie Google
-     Kalender mobil), die Zeitachse links bleibt dabei (sticky) sichtbar. */
-  .week-grid-time-gutter { flex: 0 0 42px; }
-  .week-grid-hours { flex: 0 0 42px; }
-  .week-grid-body { position: relative; }
-  .week-grid-header, .week-grid-allday, .week-grid-days { min-width: 560px; }
-  .week-grid-body { overflow-x: auto; }
-  .week-grid-hour-label { font-size: 9px; }
-  .week-event { font-size: 10px; }
+  /* Stunden-Zeitraster: Tagesspalten werden auf dem Handy einfach
+     schmaler (flex:1, siehe Basis-Regel oben) statt horizontal zu
+     scrollen - ein zusätzlicher horizontal scrollender Container INNERHALB
+     der Seite kollidierte mit der Wischgeste zum Wochenwechsel (siehe
+     [data-swipe-nav]-Script): ein Wisch nach rechts, um Freitag-Sonntag
+     zu sehen, wechselte dadurch ungewollt schon vorher die Woche, bevor
+     man überhaupt durchgescrollt hatte (auf manchen Browsern/Geräten
+     reproduzierbar). Mit kompletter Verzicht auf inneren horizontalen
+     Scroll verhält sich die Wischgeste jetzt eindeutig: horizontal
+     wechselt die Woche, vertikal scrollt die Uhrzeit - wie in den
+     meisten mobilen Kalender-Apps. */
+  .week-grid-time-gutter { flex: 0 0 34px; }
+  .week-grid-hours { flex: 0 0 34px; }
+  .week-grid-daylabel { padding: 6px 1px; }
+  .week-grid-daylabel .weekday-label { font-size: 9px; }
+  .week-grid-hour-label { font-size: 8px; right: 3px; }
+  .week-event { font-size: 9px; padding: 1px 3px; }
+  .week-event-time { font-size: 8px; }
 
   .form-card { padding: 20px; max-width: 100%; }
   .row { flex-direction: column; gap: 0; }
@@ -584,4 +611,7 @@ button, .btn {
 
 @media (max-width: 420px) {
   .day-event { padding: 10px 12px; }
+
+  .install-banner { flex-wrap: wrap; row-gap: 8px; }
+  .install-banner-text { flex-basis: 100%; }
 }
