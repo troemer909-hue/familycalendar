@@ -8,8 +8,8 @@
 // session-/mandantenabhängig (eigene Termine, CSRF-Token), ein
 // gecachtes HTML-Fragment könnte veraltete oder falsche Daten eines
 // anderen Logins zeigen.
-const CACHE_NAME = 'familienkalender-shell-v1';
-const SHELL_ASSETS = ['/styles.css', '/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png'];
+const CACHE_NAME = 'familienkalender-shell-v2';
+const SHELL_ASSETS = ['/styles.css', '/manifest.json', '/app-icons/icon-192.png', '/app-icons/icon-512.png'];
 
 self.addEventListener('install', function (event) {
   event.waitUntil(
@@ -53,7 +53,7 @@ self.addEventListener('push', function (event) {
   const title = data.title || 'Familienkalender';
   const options = {
     body: data.body || '',
-    icon: '/icons/icon-192.png',
+    icon: '/app-icons/icon-192.png',
     data: { url: data.url || '/calendar.php' },
   };
 
