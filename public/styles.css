@@ -270,7 +270,7 @@ button, .btn {
   width: 32px;
   height: 32px;
   border-radius: 9px;
-  background: var(--teal) url('/icons/icon-192.png') center / cover no-repeat;
+  background: var(--teal) url('/app-icons/icon-192.png') center / cover no-repeat;
 }
 /* Das [hidden]-Attribut allein reicht nicht: "button, .btn { display:
    inline-block }" (siehe oben) hat dieselbe Spezifität wie die
