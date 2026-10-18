@@ -79,31 +79,71 @@ function resolveApiBaseUrl(): string
 /**
  * Auth-Daten sind bewusst NICHT mehr in einer gemeinsamen Datei gespeichert
  * (das würde auf einem von mehreren Personen genutzten Server dazu führen,
- * dass sich alle gegenseitig ein-/ausloggen), sondern in der PHP-Session –
- * jeder Browser/jedes Gerät bekommt dadurch sein eigenes, isoliertes Login.
- * Die Funktionsnamen bleiben unverändert, damit der Rest der App unangetastet
- * bleibt.
+ * dass sich alle gegenseitig ein-/ausloggen), sondern in einem eigenen,
+ * langlebigen Cookie – jeder Browser/jedes Gerät bekommt dadurch sein
+ * eigenes, isoliertes Login.
+ *
+ * Bewusst NICHT (mehr) in $_SESSION: der Session-COOKIE lebt zwar laut
+ * session_set_cookie_params() oben 10 Jahre, aber die zugehörigen
+ * Session-DATEN auf dem Server unterliegen zusätzlich PHP's eigener
+ * Garbage Collection (session.gc_maxlifetime, auf den meisten Hosts per
+ * Default ca. 24 Minuten Inaktivität, auf Plesk-Hosts oft zusätzlich per
+ * eigenem Cron unabhängig von der php.ini). Ein "für immer angemeldet
+ * bleiben" ist damit über $_SESSION gar nicht zuverlässig erreichbar -
+ * das Token verschwindet serverseitig, obwohl der Cookie im Browser noch
+ * 10 Jahre gültig wäre (genau das war der gemeldete Bug: Nutzer wurden
+ * nach Inaktivität ausgeloggt). Der eigene Cookie trägt das Token direkt
+ * im Browser und ist von PHP's Session-Lebenszyklus komplett unabhängig.
+ *
+ * Unkritisch im Cookie: das Token selbst ist ein signiertes JWT (siehe
+ * Token::verify(), prüft die Signatur serverseitig) - ein verändertes
+ * Token wird einfach abgelehnt. is_platform_admin ist ohnehin nur eine
+ * UI-Komfort-Markierung (siehe isPlatformAdmin()), keine
+ * Sicherheitsprüfung. Die Funktionsnamen bleiben unverändert, damit der
+ * Rest der App unangetastet bleibt.
  */
+const AUTH_COOKIE_NAME = 'fk_auth';
+
 function loadConfig(): array
 {
+    $raw = $_COOKIE[AUTH_COOKIE_NAME] ?? null;
+    $data = is_string($raw) ? json_decode($raw, true) : null;
+    if (!is_array($data)) {
+        $data = [];
+    }
+
     return [
-        'api_base_url' => $_SESSION['api_base_url'] ?? DEFAULT_API_BASE_URL,
-        'token' => $_SESSION['token'] ?? null,
-        'is_platform_admin' => $_SESSION['is_platform_admin'] ?? false,
+        'api_base_url' => $data['api_base_url'] ?? DEFAULT_API_BASE_URL,
+        'token' => $data['token'] ?? null,
+        'is_platform_admin' => $data['is_platform_admin'] ?? false,
     ];
 }
 
 function saveConfig(array $config): void
 {
-    if (array_key_exists('api_base_url', $config)) {
-        $_SESSION['api_base_url'] = $config['api_base_url'];
+    $merged = array_merge(loadConfig(), $config);
+
+    $cookieOptions = [
+        'path' => '/',
+        'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ];
+
+    if (empty($merged['token'])) {
+        // Logout: Cookie aktiv löschen statt nur leeren Wert zu setzen,
+        // sonst bliebe ein (leerer) Cookie bis zum Ablaufdatum bestehen.
+        setcookie(AUTH_COOKIE_NAME, '', $cookieOptions + ['expires' => time() - 3600]);
+        unset($_COOKIE[AUTH_COOKIE_NAME]);
+        return;
     }
-    if (array_key_exists('token', $config)) {
-        $_SESSION['token'] = $config['token'];
-    }
-    if (array_key_exists('is_platform_admin', $config)) {
-        $_SESSION['is_platform_admin'] = $config['is_platform_admin'];
-    }
+
+    setcookie(
+        AUTH_COOKIE_NAME,
+        json_encode($merged, JSON_UNESCAPED_SLASHES),
+        $cookieOptions + ['expires' => time() + \Familienkalender\Core\Token::LONG_LIVED_SECONDS]
+    );
+    $_COOKIE[AUTH_COOKIE_NAME] = json_encode($merged, JSON_UNESCAPED_SLASHES);
 }
 
 /**
