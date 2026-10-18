@@ -12,7 +12,7 @@ if ($apiBaseUrl === '' || $email === '') {
 
 saveConfig(['api_base_url' => $apiBaseUrl]);
 
-$client = new ApiClient($apiBaseUrl, null);
+$client = apiClientFor($apiBaseUrl, null);
 $res = $client->request('POST', '/api/auth/password-reset/request', ['email' => $email]);
 
 if (!$res['ok']) {

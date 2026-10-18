@@ -21,7 +21,7 @@ if ($password !== $passwordConfirm) {
 
 saveConfig(['api_base_url' => $apiBaseUrl]);
 
-$client = new ApiClient($apiBaseUrl, null);
+$client = apiClientFor($apiBaseUrl, null);
 $res = $client->request('POST', '/api/auth/invite/accept', [
     'token' => $token,
     'password' => $password,

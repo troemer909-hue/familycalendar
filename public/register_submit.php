@@ -15,7 +15,7 @@ if ($apiBaseUrl === '' || $familyName === '' || $adminName === '' || $email === 
     exit;
 }
 
-$client = new ApiClient($apiBaseUrl, null);
+$client = apiClientFor($apiBaseUrl, null);
 $res = $client->request('POST', '/api/auth/register', [
     'family_name' => $familyName,
     'admin_name' => $adminName,

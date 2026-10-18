@@ -13,7 +13,7 @@ if ($apiBaseUrl === '' || $email === '' || $password === '') {
 
 saveConfig(['api_base_url' => $apiBaseUrl, 'token' => null]);
 
-$client = new ApiClient($apiBaseUrl, null);
+$client = apiClientFor($apiBaseUrl, null);
 $res = $client->request('POST', '/api/auth/login', ['email' => $email, 'password' => $password]);
 
 if (!$res['ok']) {
