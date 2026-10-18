@@ -316,12 +316,67 @@ button, .btn {
 .event-chip { display: block; font-size: 11px; padding: 2px 6px; border-radius: 5px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .event-chip.family-event { background: var(--navy); }
 
-/* Wochenansicht: dieselbe 7-Spalten-Grid wie der Monat, nur eine Zeile
-   mit mehr Höhe (mehr Termine gleichzeitig sichtbar, siehe Anlass für
-   dieses Feature) und Wochentags-Label statt reiner Zahl im Zellkopf. */
-.calendar-grid.view-week .calendar-day { min-height: 420px; }
-.calendar-grid.view-week .day-header { flex-wrap: wrap; }
-.weekday-label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; flex-basis: 100%; }
+/* -------------------------- Wochenansicht (Stunden-Zeitraster) --------
+   Wie bei Google Kalender: eine Ganztägig-Zeile oben, darunter 7
+   Tagesspalten mit einer durchgehenden 00-24-Uhr-Zeitachse, Termine
+   als absolut positionierte Blöcke (Top/Höhe aus Start-/Endzeit in
+   Minuten, siehe layoutWeekDayEvents() in Helpers.php). Überlappende
+   Termine teilen sich die Spaltenbreite statt sich zu überdecken. */
+:root { --week-hour-height: 48px; }
+
+.week-grid { display: flex; flex-direction: column; background: #fff; border-radius: 10px; border: 1px solid #edeef2; overflow: hidden; }
+.week-grid-time-gutter { flex: 0 0 52px; }
+
+.week-grid-header { display: flex; border-bottom: 1px solid #edeef2; }
+.week-grid-daylabel {
+  flex: 1; min-width: 0; text-align: center; padding: 8px 2px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.week-grid-daylabel .weekday-label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
+.week-grid-daylabel .day-number {
+  font-size: 15px; display: inline-flex; align-items: center; justify-content: center;
+  min-width: 26px; height: 26px; border-radius: 50%; padding: 0 4px;
+}
+.week-grid-daylabel.today .day-number { background: var(--teal); color: #fff; }
+
+.week-grid-allday { display: flex; border-bottom: 1px solid #edeef2; min-height: 28px; }
+.week-grid-allday-cell { flex: 1; min-width: 0; padding: 2px; display: flex; flex-direction: column; gap: 2px; border-left: 1px solid #f4f5f7; }
+.week-grid-allday-cell .event-chip { font-size: 10px; }
+
+/* Scrollbarer Zeitraster-Körper - 24 Stunden sind höher als der
+   verfügbare Platz, ein kleines Script scrollt beim Laden automatisch
+   zu einer sinnvollen Tageszeit (siehe appChromeClose()). */
+.week-grid-body { display: flex; max-height: 70vh; overflow-y: auto; }
+.week-grid-hours {
+  flex: 0 0 52px; position: relative;
+  height: calc(var(--week-hour-height) * 24);
+}
+.week-grid-hour-label {
+  position: absolute; right: 6px; transform: translateY(-50%);
+  font-size: 10px; color: #94a3b8; white-space: nowrap;
+}
+.week-grid-days { display: flex; flex: 1; min-width: 0; }
+.week-grid-day-col {
+  flex: 1; min-width: 0; position: relative; border-left: 1px solid #f4f5f7;
+  height: calc(var(--week-hour-height) * 24);
+}
+.week-grid-hour-line {
+  position: absolute; left: 0; right: 0; border-top: 1px solid #f4f5f7;
+}
+.week-grid-now-line { position: absolute; left: 0; right: 0; height: 2px; background: var(--warm-2); z-index: 2; }
+.week-grid-now-line::before {
+  content: ''; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px;
+  border-radius: 50%; background: var(--warm-2);
+}
+
+.week-event {
+  position: absolute; border-radius: 6px; padding: 2px 6px; overflow: hidden;
+  color: #fff; font-size: 11px; line-height: 1.3; text-decoration: none;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.6);
+}
+.week-event.family-event { background: var(--navy); }
+.week-event-time { display: block; font-size: 10px; opacity: .85; }
+.week-event-title { display: block; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Tagesansicht: Agenda-Liste statt Grid - pro Termin Uhrzeit + Titel. */
 .day-agenda { display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
@@ -448,9 +503,9 @@ button, .btn {
   button, .btn { padding: 11px 16px; }
   .nav-link { padding: 11px 8px; }
 
-  /* Monats-/Wochenraster: Spalten dürfen auf schmalen Screens nicht
-     unter eine lesbare Breite schrumpfen - stattdessen scrollt das
-     Raster horizontal, die Wochentags-Reihenfolge bleibt dabei stabil
+  /* Monatsraster: Spalten dürfen auf schmalen Screens nicht unter eine
+     lesbare Breite schrumpfen - stattdessen scrollt das Raster
+     horizontal, die Wochentags-Reihenfolge bleibt dabei stabil
      erreichbar statt auf Agenda-only reduziert zu werden. */
   .calendar-grid {
     grid-template-columns: repeat(7, minmax(78px, 1fr));
@@ -459,40 +514,51 @@ button, .btn {
     padding-bottom: 4px;
   }
   .calendar-day { min-height: 92px; padding: 5px; }
-  .calendar-grid.view-week .calendar-day { min-height: 280px; }
   .event-chip { font-size: 10px; padding: 2px 5px; }
   .day-event-time { min-width: 72px; font-size: 11px; }
+
+  /* Stunden-Zeitraster: Tagesspalten dürfen schmaler werden, aber nicht
+     unlesbar - das ganze Raster scrollt dann horizontal (wie Google
+     Kalender mobil), die Zeitachse links bleibt dabei (sticky) sichtbar. */
+  .week-grid-time-gutter { flex: 0 0 42px; }
+  .week-grid-hours { flex: 0 0 42px; }
+  .week-grid-body { position: relative; }
+  .week-grid-header, .week-grid-allday, .week-grid-days { min-width: 560px; }
+  .week-grid-body { overflow-x: auto; }
+  .week-grid-hour-label { font-size: 9px; }
+  .week-event { font-size: 10px; }
 
   .form-card { padding: 20px; max-width: 100%; }
   .row { flex-direction: column; gap: 0; }
 }
 
 /* Echte Telefonbreite (praktisch jedes Smartphone im Hochformat): das
-   7-Spalten-Raster aus der Desktop-/Tablet-Ansicht lässt sich hier nicht
-   mehr sinnvoll mit lesbarem Text pro Zelle darstellen. Statt horizontal
-   zu scrollen (unten in .view-week weiterhin genutzt), werden alle 7
-   Spalten erzwungen sichtbar und Termine nur noch als farbiger Punkt
-   gezeigt - Tippen auf die Tageszahl öffnet die volle Agenda-Ansicht des
-   Tages (siehe day-number-Link in calendar.php), wo Titel wieder lesbar
-   sind. Dasselbe Muster wie bei den meisten mobilen Kalender-Apps. */
+   7-Spalten-Monatsraster lässt sich hier nicht mehr sinnvoll mit
+   lesbarem Text pro Zelle darstellen. Statt horizontal zu scrollen,
+   werden alle 7 Spalten erzwungen sichtbar und Termine nur noch als
+   farbiger Punkt gezeigt - Tippen auf die Tageszahl öffnet die volle
+   Agenda-Ansicht des Tages (siehe day-number-Link in calendar.php), wo
+   Titel wieder lesbar sind. Dasselbe Muster wie bei den meisten
+   mobilen Kalender-Apps. Die Wochenansicht (Stunden-Zeitraster) bleibt
+   bei ihrem horizontalen Scroll-Verhalten aus dem 860px-Breakpoint. */
 @media (max-width: 600px) {
-  .calendar-grid:not(.view-week) {
+  .calendar-grid {
     grid-template-columns: repeat(7, 1fr);
     overflow-x: visible;
     gap: 3px;
   }
-  .calendar-grid:not(.view-week) .calendar-weekday { font-size: 10px; padding-bottom: 2px; }
-  .calendar-grid:not(.view-week) .calendar-day { min-height: 52px; padding: 3px 2px; gap: 2px; border-radius: 7px; }
-  .calendar-grid:not(.view-week) .day-header { gap: 2px; }
-  .calendar-grid:not(.view-week) .day-number { font-size: 11px; padding: 1px; }
-  .calendar-grid:not(.view-week) .add-link { display: none; }
+  .calendar-weekday { font-size: 10px; padding-bottom: 2px; }
+  .calendar-day { min-height: 52px; padding: 3px 2px; gap: 2px; border-radius: 7px; }
+  .calendar-grid .day-header { gap: 2px; }
+  .calendar-grid .day-number { font-size: 11px; padding: 1px; }
+  .calendar-grid .add-link { display: none; }
 
   /* "Heute" wie in Google Kalender: ein ausgefüllter Kreis um die
      Tageszahl statt eines Rahmens um die ganze Zelle - dezenter und
-     im Punkt-Raster (siehe .event-chip oben) besser lesbar. */
+     im Punkt-Raster (siehe .event-chip oben) besser lesbar. Die
+     Wochenansicht hat ihre eigene, immer aktive Kreis-Regel oben. */
   .calendar-day.today { border: none; }
-  .calendar-grid:not(.view-week) .calendar-day.today .day-number,
-  .calendar-grid.view-week .calendar-day.today .day-number {
+  .calendar-day.today .day-number {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -503,7 +569,7 @@ button, .btn {
     background: var(--teal);
     color: #fff;
   }
-  .calendar-grid:not(.view-week) .event-chip {
+  .calendar-grid .event-chip {
     display: inline-block;
     width: 6px;
     height: 6px;
@@ -514,21 +580,6 @@ button, .btn {
     text-indent: -999px;
     vertical-align: top;
   }
-
-  /* Wochenansicht: statt 7 schmalen Spalten nebeneinander eine vertikal
-     gestapelte Liste - ein Tag pro Block, mit vollem Chip-Text wie am
-     Desktop, nur untereinander statt im Raster. Deutlich besser bedienbar
-     als ein horizontal scrollendes 7-Spalten-Raster auf Telefonbreite. */
-  .calendar-grid.view-week {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    overflow-x: visible;
-  }
-  .calendar-grid.view-week .calendar-weekday { display: none; }
-  .calendar-grid.view-week .calendar-day { min-height: 0; }
-  .calendar-grid.view-week .day-header { gap: 10px; }
-  .calendar-grid.view-week .weekday-label { flex-basis: auto; }
 }
 
 @media (max-width: 420px) {

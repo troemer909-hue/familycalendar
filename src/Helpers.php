@@ -458,6 +458,27 @@ function appChromeClose(string $activeNav): string
     });
   })();
 
+  // Stunden-Zeitraster der Wochenansicht (siehe calendar.php): startet
+  // beim Laden auf 00:00 gescrollt - direkt auf eine sinnvolle Tageszeit
+  // vorscrollen (kurz vor dem ersten Termin des Tages, sonst auf den
+  // späten Vormittag), damit nicht erst manuell durch die frühen,
+  // meist leeren Morgenstunden gescrollt werden muss.
+  (function () {
+    var body = document.querySelector('[data-week-scroll]');
+    if (!body) return;
+    var hourHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--week-hour-height')) || 48;
+    var firstEvent = body.querySelector('.week-event');
+    var targetHour = 8;
+    if (firstEvent) {
+      // offsetTop ist der tatsächlich gerenderte Pixel-Wert (unabhängig
+      // davon, dass die CSS-Position über calc(var(...)) gesetzt ist),
+      // anders als firstEvent.style.top, das nur den rohen calc()-String
+      // zurückgeben würde.
+      targetHour = Math.max(0, Math.floor(firstEvent.offsetTop / hourHeight) - 1);
+    }
+    body.scrollTop = targetHour * hourHeight;
+  })();
+
   // Wischgeste (links/rechts) zum Wechseln zum vorherigen/nächsten
   // Monat, Woche oder Tag - wie in Google Kalender. Nur auf Seiten mit
   // [data-swipe-nav] (aktuell nur calendar.php) überhaupt aktiv, auf
@@ -493,4 +514,97 @@ function appChromeClose(string $activeNav): string
 </script>
     <?php
     return ob_get_clean();
+}
+
+/**
+ * Positioniert die (nicht ganztägigen) Termine EINES Tages für das
+ * Stunden-Zeitraster der Wochenansicht (siehe calendar.php) - wie bei
+ * Google Kalender bekommen überlappende Termine nebeneinander Platz
+ * (Spalten-Layout) statt sich zu überdecken. Mehrtägige Termine werden
+ * auf den sichtbaren Ausschnitt dieses einen Tages geklippt (Start nie
+ * vor 00:00, Ende nie nach 24:00 desselben Tages).
+ *
+ * @param array<int,array<string,mixed>> $events Termine dieses Tages (all_day bereits herausgefiltert)
+ * @param string $dayStr 'Y-m-d' des Tages, für den geklippt wird
+ * @return list<array{event: array, startMinutes: int, endMinutes: int, col: int, cols: int}>
+ */
+function layoutWeekDayEvents(array $events, string $dayStr): array
+{
+    $dayStart = new \DateTimeImmutable($dayStr . ' 00:00:00');
+    $dayEnd = $dayStart->modify('+1 day');
+
+    $items = [];
+    foreach ($events as $event) {
+        $start = new \DateTimeImmutable($event['starts_at']);
+        $end = new \DateTimeImmutable($event['ends_at']);
+        $clippedStart = max($start, $dayStart);
+        $clippedEnd = min($end, $dayEnd);
+        if ($clippedEnd <= $clippedStart) {
+            continue;
+        }
+
+        $startMinutes = ((int) $clippedStart->format('H')) * 60 + (int) $clippedStart->format('i');
+        $durationMinutes = (int) (($clippedEnd->getTimestamp() - $clippedStart->getTimestamp()) / 60);
+        $items[] = [
+            'event' => $event,
+            'startMinutes' => $startMinutes,
+            // Mindesthöhe für sehr kurze Termine, sonst im Zeitraster
+            // (48px/Stunde) fast unsichtbar/nicht mehr anklickbar.
+            'endMinutes' => $startMinutes + max($durationMinutes, 20),
+            'col' => 0,
+            'cols' => 1,
+        ];
+    }
+
+    usort($items, static fn (array $a, array $b): int => $a['startMinutes'] <=> $b['startMinutes']);
+
+    // Überlappende Termine zu Clustern zusammenfassen (klassisches
+    // "merge overlapping intervals" auf der bereits nach Startzeit
+    // sortierten Liste - ein Cluster endet, sobald der nächste Termin
+    // erst NACH dem bisher spätesten Ende beginnt), dann pro Cluster per
+    // Greedy-Algorithmus Spalten vergeben (erste Spalte, deren letzter
+    // Termin schon vorbei ist, sonst neue Spalte).
+    $n = count($items);
+    $clusterOf = array_fill(0, $n, -1);
+    $clusterCount = 0;
+    for ($i = 0; $i < $n; $i++) {
+        if ($clusterOf[$i] !== -1) {
+            continue;
+        }
+        $clusterOf[$i] = $clusterCount;
+        $maxEnd = $items[$i]['endMinutes'];
+        for ($j = $i + 1; $j < $n; $j++) {
+            if ($items[$j]['startMinutes'] < $maxEnd) {
+                $clusterOf[$j] = $clusterCount;
+                $maxEnd = max($maxEnd, $items[$j]['endMinutes']);
+            }
+        }
+        $clusterCount++;
+    }
+
+    for ($c = 0; $c < $clusterCount; $c++) {
+        $columnEnds = [];
+        foreach (array_keys($clusterOf, $c, true) as $idx) {
+            $placed = false;
+            foreach ($columnEnds as $col => $colEnd) {
+                if ($items[$idx]['startMinutes'] >= $colEnd) {
+                    $columnEnds[$col] = $items[$idx]['endMinutes'];
+                    $items[$idx]['col'] = $col;
+                    $placed = true;
+                    break;
+                }
+            }
+            if (!$placed) {
+                $col = count($columnEnds);
+                $columnEnds[$col] = $items[$idx]['endMinutes'];
+                $items[$idx]['col'] = $col;
+            }
+        }
+        $totalCols = count($columnEnds);
+        foreach (array_keys($clusterOf, $c, true) as $idx) {
+            $items[$idx]['cols'] = $totalCols;
+        }
+    }
+
+    return $items;
 }

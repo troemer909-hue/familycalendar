@@ -57,14 +57,15 @@ final class CalendarViewsTest extends TestCase
         self::assertStringContainsString('calendar-weekday', $result['body']);
     }
 
-    public function testCalendarWeekViewRendersASingleRowOfSevenDays(): void
+    public function testCalendarWeekViewRendersSevenDayColumnsAsHourlyGrid(): void
     {
         $browser = $this->registeredSession();
 
         $result = $browser->get('/calendar.php?view=week&date=2026-03-10');
 
         self::assertSame(200, $result['status']);
-        self::assertSame(7, substr_count($result['body'], 'class="calendar-day'));
+        self::assertSame(7, substr_count($result['body'], 'class="week-grid-daylabel'));
+        self::assertSame(7, substr_count($result['body'], 'class="week-grid-day-col'));
         self::assertStringContainsString('KW 11', $result['body']);
     }
 
