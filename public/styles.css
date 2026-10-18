@@ -247,6 +247,13 @@ button, .btn {
 .sidebar .brand .mark { width: 30px; height: 30px; }
 .sidebar .brand .word { font-size: 15px; }
 
+.install-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
+/* Das [hidden]-Attribut allein reicht nicht: "button, .btn { display:
+   inline-block }" (siehe oben) hat dieselbe Spezifität wie die
+   UA-Regel für [hidden] und gewinnt per Ladereihenfolge - ohne diese
+   Regel bliebe der Button entgegen dem hidden-Attribut immer sichtbar. */
+.install-btn[hidden] { display: none; }
+
 .page-header { margin-bottom: 20px; }
 .sidebar h2 { font-size: 14px; text-transform: uppercase; color: #94a3b8; margin: 0 0 12px; }
 .member-chip { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; font-size: 14px; }
@@ -267,6 +274,8 @@ button, .btn {
   text-decoration: none;
 }
 .nav-link:hover { background: #eef0f4; text-decoration: none; }
+.nav-link.active { background: #eef0f4; color: var(--teal); font-weight: 600; }
+.nav-link.active .nav-icon { color: var(--teal); }
 .nav-link span { min-width: 0; overflow-wrap: break-word; }
 .nav-icon { width: 18px; height: 18px; flex-shrink: 0; color: #64748b; margin-top: 1px; }
 .nav-link-muted { color: #64748b; }
@@ -279,7 +288,12 @@ button, .btn {
 
 .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
 .month-nav { display: flex; align-items: center; gap: 10px; }
-.month-nav .btn { width: 34px; height: 34px; text-align: center; padding: 6px 0; background: #fff; border: 1px solid #d7dae1; }
+/* Nur die reinen Pfeil-Buttons (‹ ›) bekommen die feste quadratische
+   Größe - der "Heute"-Button (zusätzliche .btn-secondary-Klasse) hat
+   Text statt eines einzelnen Zeichens und braucht dafür Platz, sonst
+   wird die Beschriftung abgeschnitten/gequetscht. */
+.month-nav .btn:not(.btn-secondary) { width: 34px; height: 34px; text-align: center; padding: 6px 0; background: #fff; border: 1px solid #d7dae1; }
+.month-nav .btn.btn-secondary { white-space: nowrap; }
 #current-month-label { min-width: 160px; margin: 0; font-size: 18px; }
 
 .view-switch { display: flex; gap: 3px; background: #f0f1f4; border-radius: 8px; padding: 3px; }
@@ -326,7 +340,11 @@ button, .btn {
 .day-event-location { font-size: 12px; color: #94a3b8; }
 
 /* -------------------------- Formularseiten -------------------------- */
-.form-card { background: #fff; padding: 28px 32px; border-radius: 14px; max-width: 480px; }
+/* Zentriert auf breiten Desktop-Bildschirmen statt am linken Rand der
+   (per flex:1 oft sehr breiten) .main-area zu kleben - betrifft alle
+   Unterseiten-Inhalte (Mitglieder, Kalenderquellen, Einstellungen,
+   Plattform-Verwaltung, ...), die in einer .form-card stecken. */
+.form-card { background: #fff; padding: 28px 32px; border-radius: 14px; max-width: 480px; margin: 0 auto; }
 
 /* -------------------------- Rechtliche Seiten (Impressum/Datenschutz) -------------------------- */
 .legal-page section { margin-top: 24px; }
@@ -426,7 +444,7 @@ button, .btn {
   /* Touch-Targets auf min. ~44px anheben (Apple/Google-Empfehlung) -
      auf dem Desktop bleibt die kompaktere Größe, da dort mit Maus/
      Trackpad statt Finger bedient wird. */
-  .month-nav .btn { width: 44px; height: 44px; }
+  .month-nav .btn:not(.btn-secondary) { width: 44px; height: 44px; }
   button, .btn { padding: 11px 16px; }
   .nav-link { padding: 11px 8px; }
 

@@ -18,8 +18,7 @@ $vapidPublicKey = $pushConfigured ? ($vapidRes['data']['publicKey'] ?? null) : n
 <?= pwaHeadTags() ?>
 </head>
 <body>
-<div class="main-area">
-  <div class="page-header"><?= brandLogo() ?></div>
+<?= appChromeOpen('push') ?>
   <div class="form-card" style="max-width:560px;">
     <h1>Push-Benachrichtigungen</h1>
     <p class="hint-text">
@@ -47,7 +46,7 @@ $vapidPublicKey = $pushConfigured ? ($vapidRes['data']['publicKey'] ?? null) : n
       <a href="calendar.php" class="btn btn-secondary">Zurück zum Kalender</a>
     </p>
   </div>
-</div>
+<?= appChromeClose('push') ?>
 
 <?php if ($pushConfigured): ?>
 <script>

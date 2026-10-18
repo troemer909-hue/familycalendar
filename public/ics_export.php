@@ -30,8 +30,7 @@ $notice = $_GET['notice'] ?? null;
 <?= pwaHeadTags() ?>
 </head>
 <body>
-<div class="main-area">
-  <div class="page-header"><?= brandLogo() ?></div>
+<?= appChromeOpen('ics') ?>
   <div class="form-card" style="max-width:640px;">
     <h1>Kalender-Abo (ICS-Export)</h1>
     <p class="hint-text">
@@ -76,6 +75,6 @@ $notice = $_GET['notice'] ?? null;
       <a href="calendar.php" class="btn btn-secondary">Zurück zum Kalender</a>
     </p>
   </div>
-</div>
+<?= appChromeClose('ics') ?>
 </body>
 </html>

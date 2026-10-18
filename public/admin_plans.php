@@ -22,8 +22,7 @@ $notice = $_GET['notice'] ?? null;
 <?= pwaHeadTags() ?>
 </head>
 <body>
-<div class="main-area">
-  <div class="page-header"><?= brandLogo() ?></div>
+<?= appChromeOpen('admin') ?>
   <div class="form-card" style="max-width:900px;">
     <h1>Pläne</h1>
     <p class="hint-text">
@@ -81,6 +80,6 @@ $notice = $_GET['notice'] ?? null;
       <a href="calendar.php" class="btn btn-secondary">Zurück zum Kalender</a>
     </p>
   </div>
-</div>
+<?= appChromeClose('admin') ?>
 </body>
 </html>

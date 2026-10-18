@@ -49,6 +49,24 @@ function pwaHeadTags(): string
         });
       });
     }
+
+    // Chrome zeigt den automatischen Installations-Hinweis nur nach
+    // eigenen Engagement-Heuristiken (u.a. mehrfacher Besuch mit
+    // zeitlichem Abstand) - das Ereignis selbst (beforeinstallprompt)
+    // kommt aber zuverlässig, sobald die Installierbarkeits-Kriterien
+    // erfüllt sind. Hier abgefangen und für einen eigenen, sofort
+    // sichtbaren "App installieren"-Button in der Sidebar aufgehoben
+    // (siehe appChromeOpen()/appChromeClose()), statt auf den
+    // Browser-Zufall zu warten.
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      window.__fkInstallPrompt = e;
+      document.dispatchEvent(new CustomEvent('fk:install-available'));
+    });
+    window.addEventListener('appinstalled', function () {
+      window.__fkInstallPrompt = null;
+      document.dispatchEvent(new CustomEvent('fk:install-done'));
+    });
   </script>
 HTML;
 }
@@ -238,4 +256,237 @@ function sanitizeCalendarBack(string $back): string
     }
 
     return http_build_query(calendarQueryParams($view, $month, $date, $hiddenMemberIds));
+}
+
+/**
+ * Gemeinsame "App-Chrome" (Hamburger-Topbar + Sidebar-Drawer + mobile
+ * Footer-Tabbar) für ALLE eingeloggten App-Seiten - vorher steckte das
+ * nur in calendar.php, wodurch das Footer-Menü beim Aufruf jeder anderen
+ * Seite (Mitglieder, Kalenderquellen, Einstellungen, ...) verschwand.
+ * $activeNav steuert, welcher Sidebar-/Footer-Eintrag als aktiv markiert
+ * wird: 'calendar' | 'members' | 'sources' | 'ics' | 'push' |
+ * 'notifications' | 'admin'. $extraSidebarHtml ist zusätzlicher Inhalt
+ * ganz oben in der Sidebar (aktuell nur von calendar.php für den
+ * Mitglieder-Sichtbarkeitsfilter genutzt). $mainAttrs sind zusätzliche
+ * Attribute auf dem <main>-Tag (aktuell nur von calendar.php für die
+ * Wischgesten-Datenattribute genutzt).
+ *
+ * appChromeOpen() öffnet <div class="app-layout"> bis <main ...> (noch
+ * offen!), appChromeClose() schließt </main></div>, hängt die
+ * Footer-Tabbar an und bindet das Drawer-/Wischgesten-Script ein - jede
+ * Seite ruft beide auf und füllt dazwischen ihren eigenen Inhalt.
+ */
+function appChromeOpen(string $activeNav, string $extraSidebarHtml = '', string $mainAttrs = ''): string
+{
+    $navClass = static fn (string $key): string => 'nav-link' . ($activeNav === $key ? ' active' : '');
+
+    ob_start();
+    ?>
+<div class="app-layout">
+  <header class="mobile-topbar">
+    <button type="button" class="sidebar-toggle" data-sidebar-trigger aria-label="Menü öffnen" aria-expanded="false" aria-controls="app-sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <?= brandLogo() ?>
+  </header>
+  <div class="sidebar-backdrop" data-sidebar-backdrop></div>
+  <aside class="sidebar" id="app-sidebar">
+    <?= brandLogo() ?>
+    <button type="button" id="fk-install-btn" class="btn btn-secondary install-btn" hidden>
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      App installieren
+    </button>
+    <?= $extraSidebarHtml ?>
+
+    <nav class="sidebar-nav">
+      <div class="nav-group">
+        <span class="nav-group-label">Kalender</span>
+        <a href="members.php" class="<?= $navClass('members') ?>">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 5 18.5V20"/><circle cx="9.5" cy="8" r="3.2"/><path d="M15.5 8.2a2.8 2.8 0 1 1 1.9 5"/><path d="M19.5 20v-1.3a3 3 0 0 0-2-2.8"/></svg>
+          <span>Mitglieder verwalten</span>
+        </a>
+        <a href="calendar_sources.php" class="<?= $navClass('sources') ?>">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12a8 8 0 0 1 14.6-4.6M20 12a8 8 0 0 1-14.6 4.6"/><path d="M18.6 3.4V8h-4.6M5.4 20.6V16H10"/></svg>
+          <span>Kalenderquellen verwalten</span>
+        </a>
+        <a href="ics_export.php" class="<?= $navClass('ics') ?>">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+          <span>Kalender-Abo (ICS-Export)</span>
+        </a>
+      </div>
+
+      <div class="nav-group">
+        <span class="nav-group-label">Benachrichtigungen</span>
+        <a href="push_subscribe.php" class="<?= $navClass('push') ?>">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 1 0-12 0c0 4-1.5 6-2 7h16c-.5-1-2-3-2-7"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
+          <span>Push-Benachrichtigungen</span>
+        </a>
+        <a href="notification_settings.php" class="<?= $navClass('notifications') ?>">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l1.8-1.4-2-3.4-2.1.7a7.7 7.7 0 0 0-2.6-1.5L14 2.5h-4l-.5 2.4a7.7 7.7 0 0 0-2.6 1.5l-2.1-.7-2 3.4L4.6 10.5a7.6 7.6 0 0 0 0 3l-1.8 1.4 2 3.4 2.1-.7a7.7 7.7 0 0 0 2.6 1.5l.5 2.4h4l.5-2.4a7.7 7.7 0 0 0 2.6-1.5l2.1.7 2-3.4z"/></svg>
+          <span>Benachrichtigungseinstellungen</span>
+        </a>
+      </div>
+
+      <?php if (isPlatformAdmin()): ?>
+      <div class="nav-group">
+        <span class="nav-group-label">Verwaltung</span>
+        <a href="admin_families.php" class="<?= $navClass('admin') ?>">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4 6v6c0 5 3.5 7.5 8 9 4.5-1.5 8-4 8-9V6z"/></svg>
+          <span>Plattform-Verwaltung</span>
+        </a>
+      </div>
+      <?php endif; ?>
+
+      <div class="nav-group nav-group-footer">
+        <a href="logout.php" class="nav-link nav-link-muted">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+          <span>Abmelden</span>
+        </a>
+        <p class="legal-links">
+          <a href="impressum.php">Impressum</a><span class="sep">·</span><a href="datenschutz.php">Datenschutz</a>
+        </p>
+      </div>
+    </nav>
+  </aside>
+
+  <main class="main-area" <?= $mainAttrs ?>>
+    <?php
+    return ob_get_clean();
+}
+
+function appChromeClose(string $activeNav): string
+{
+    $bottomActive = in_array($activeNav, ['calendar', 'members', 'sources'], true) ? $activeNav : 'more';
+    $itemClass = static fn (string $key): string => 'bottom-nav-item' . ($bottomActive === $key ? ' active' : '');
+
+    ob_start();
+    ?>
+  </main>
+</div>
+
+<nav class="mobile-bottom-nav">
+  <a href="calendar.php" class="<?= $itemClass('calendar') ?>">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+    <span>Kalender</span>
+  </a>
+  <a href="members.php" class="<?= $itemClass('members') ?>">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 5 18.5V20"/><circle cx="9.5" cy="8" r="3.2"/><path d="M15.5 8.2a2.8 2.8 0 1 1 1.9 5"/><path d="M19.5 20v-1.3a3 3 0 0 0-2-2.8"/></svg>
+    <span>Familie</span>
+  </a>
+  <a href="calendar_sources.php" class="<?= $itemClass('sources') ?>">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12a8 8 0 0 1 14.6-4.6M20 12a8 8 0 0 1-14.6 4.6"/><path d="M18.6 3.4V8h-4.6M5.4 20.6V16H10"/></svg>
+    <span>Quellen</span>
+  </a>
+  <button type="button" class="<?= $itemClass('more') ?>" data-sidebar-trigger aria-label="Menü öffnen">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="6" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18" r="1.6"/></svg>
+    <span>Mehr</span>
+  </button>
+</nav>
+
+<script>
+  // Mobile Sidebar als Off-Canvas-Drawer: nur relevant auf schmalen
+  // Bildschirmen (siehe @media (max-width: 860px) in styles.css), auf
+  // dem Desktop bleibt die Sidebar immer sichtbar und dieser Code
+  // bleibt wirkungslos (kein "open"-Klasse-Pfad wird dort erreicht).
+  (function () {
+    // Zwei Trigger öffnen denselben Drawer: der Hamburger in der
+    // Topbar (nur bei engem Viewport sichtbar) und der "Mehr"-Eintrag
+    // im Footer-Menü - beide tragen [data-sidebar-trigger].
+    var triggers = document.querySelectorAll('[data-sidebar-trigger]');
+    var sidebar = document.getElementById('app-sidebar');
+    var backdrop = document.querySelector('[data-sidebar-backdrop]');
+    if (!triggers.length || !sidebar || !backdrop) return;
+
+    function setExpanded(value) {
+      triggers.forEach(function (t) { t.setAttribute('aria-expanded', value); });
+    }
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      backdrop.classList.remove('visible');
+      setExpanded('false');
+    }
+    function openSidebar() {
+      sidebar.classList.add('open');
+      backdrop.classList.add('visible');
+      setExpanded('true');
+    }
+    triggers.forEach(function (trigger) {
+      trigger.addEventListener('click', function () {
+        if (sidebar.classList.contains('open')) {
+          closeSidebar();
+        } else {
+          openSidebar();
+        }
+      });
+    });
+    backdrop.addEventListener('click', closeSidebar);
+    sidebar.querySelectorAll('a').forEach(function (link) {
+      link.addEventListener('click', closeSidebar);
+    });
+  })();
+
+  // "App installieren"-Button in der Sidebar: bleibt per [hidden]
+  // unsichtbar, bis beforeinstallprompt gefeuert hat (siehe
+  // pwaHeadTags()) - Chrome entscheidet selbst, WANN das passiert
+  // (Engagement-Heuristiken), aber sobald es so weit ist, zeigen wir den
+  // Button sofort statt auf Chromes eigenes (seltener erscheinendes)
+  // Banner zu warten.
+  (function () {
+    var btn = document.getElementById('fk-install-btn');
+    if (!btn) return;
+
+    function reveal() {
+      if (window.__fkInstallPrompt) {
+        btn.hidden = false;
+      }
+    }
+    reveal(); // falls beforeinstallprompt schon VOR diesem Script feuerte
+    document.addEventListener('fk:install-available', reveal);
+    document.addEventListener('fk:install-done', function () { btn.hidden = true; });
+
+    btn.addEventListener('click', function () {
+      if (!window.__fkInstallPrompt) return;
+      window.__fkInstallPrompt.prompt();
+      window.__fkInstallPrompt.userChoice.finally(function () {
+        window.__fkInstallPrompt = null;
+        btn.hidden = true;
+      });
+    });
+  })();
+
+  // Wischgeste (links/rechts) zum Wechseln zum vorherigen/nächsten
+  // Monat, Woche oder Tag - wie in Google Kalender. Nur auf Seiten mit
+  // [data-swipe-nav] (aktuell nur calendar.php) überhaupt aktiv, auf
+  // allen anderen Seiten bleibt dieser Code wirkungslos. Reagiert nur
+  // auf überwiegend horizontale Wischbewegungen über einer
+  // Mindestdistanz, damit normales vertikales Scrollen unangetastet
+  // bleibt (kein preventDefault auf touchmove).
+  (function () {
+    var area = document.querySelector('[data-swipe-nav]');
+    if (!area) return;
+    var startX = null;
+    var startY = null;
+    var THRESHOLD = 60;
+
+    area.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    }, { passive: true });
+
+    area.addEventListener('touchend', function (e) {
+      if (startX === null) return;
+      var endX = e.changedTouches[0].clientX;
+      var endY = e.changedTouches[0].clientY;
+      var dx = endX - startX;
+      var dy = endY - startY;
+      startX = null;
+      if (Math.abs(dx) < THRESHOLD || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      var url = dx < 0 ? area.dataset.nextUrl : area.dataset.prevUrl;
+      if (url) window.location.href = url;
+    }, { passive: true });
+  })();
+</script>
+    <?php
+    return ob_get_clean();
 }

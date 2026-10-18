@@ -84,7 +84,7 @@ final class AuthController
 
         $token = Token::issue([
             'user_id' => $userId,
-            'exp' => time() + 60 * 60 * 24 * 30, // 30 Tage
+            'exp' => time() + Token::LONG_LIVED_SECONDS,
         ]);
 
         Response::json([
@@ -123,7 +123,7 @@ final class AuthController
 
         $token = Token::issue([
             'user_id' => (int) $user['id'],
-            'exp' => time() + 60 * 60 * 24 * 30,
+            'exp' => time() + Token::LONG_LIVED_SECONDS,
         ]);
 
         // is_platform_admin wird hier NUR fürs client-seitige Ein-/Ausblenden
@@ -310,7 +310,7 @@ final class AuthController
 
         $authToken = Token::issue([
             'user_id' => $userId,
-            'exp' => time() + 60 * 60 * 24 * 30,
+            'exp' => time() + Token::LONG_LIVED_SECONDS,
         ]);
 
         Response::json(['status' => 'ok', 'token' => $authToken]);

@@ -12,6 +12,15 @@ namespace Familienkalender\Core;
  */
 final class Token
 {
+    /**
+     * Nutzer sollen dauerhaft angemeldet bleiben (keine App, bei der man
+     * sich alle paar Wochen neu anmelden will) - 10 Jahre ist technisch
+     * kein "nie", aber für den Zweck dieser App praktisch gleichbedeutend,
+     * ohne auf eine echte Ablaufzeit (exp-Claim, siehe verify()) ganz zu
+     * verzichten.
+     */
+    public const LONG_LIVED_SECONDS = 60 * 60 * 24 * 365 * 10;
+
     private static function secret(): string
     {
         $secret = Env::get('APP_SECRET');
