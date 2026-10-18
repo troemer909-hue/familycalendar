@@ -254,24 +254,37 @@ button, .btn {
 .install-banner {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  background: linear-gradient(135deg, var(--warm-1), var(--warm-2));
-  color: #fff;
+  gap: 10px;
+  margin: 8px 10px 0;
+  padding: 10px 12px;
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #e5e7ec;
+  box-shadow: 0 2px 10px rgba(32, 54, 80, .08);
+  color: var(--navy);
+}
+.install-banner::before {
+  content: '';
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--teal) url('/icons/icon-192.png') center / cover no-repeat;
 }
 /* Das [hidden]-Attribut allein reicht nicht: "button, .btn { display:
    inline-block }" (siehe oben) hat dieselbe Spezifität wie die
    UA-Regel für [hidden] und gewinnt per Ladereihenfolge - ohne diese
    Regel bliebe der Banner entgegen dem hidden-Attribut immer sichtbar. */
 .install-banner[hidden] { display: none; }
-.install-banner-text { flex: 1; font-size: 13px; font-weight: 500; }
-.install-banner-btn { flex: none; background: #fff; color: var(--warm-3); white-space: nowrap; }
-.install-banner-btn:hover { background: #fff; opacity: .9; }
+.install-banner-text { flex: 1; font-size: 13px; line-height: 1.35; font-weight: 500; color: #475569; }
+.install-banner-btn { flex: none; background: var(--teal); color: #fff; white-space: nowrap; padding: 8px 14px; font-size: 13px; }
+.install-banner-btn:hover { background: var(--teal); opacity: .9; }
 .install-banner-dismiss {
-  flex: none; background: none; border: none; color: #fff; font-size: 22px;
-  line-height: 1; padding: 0 4px; cursor: pointer; opacity: .85;
+  flex: none; background: none; border: none; color: #94a3b8; font-size: 20px;
+  line-height: 1; padding: 0 2px; cursor: pointer; opacity: .85; align-self: flex-start;
 }
-.install-banner-dismiss:hover { opacity: 1; }
+.install-banner-dismiss:hover { opacity: 1; color: #475569; }
 
 .page-header { margin-bottom: 20px; }
 .sidebar h2 { font-size: 14px; text-transform: uppercase; color: #94a3b8; margin: 0 0 12px; }
