@@ -6,6 +6,7 @@ use Familienkalender\Controllers\AdminFamilyController;
 use Familienkalender\Controllers\AdminPlanController;
 use Familienkalender\Controllers\AuthController;
 use Familienkalender\Controllers\CalendarSourceController;
+use Familienkalender\Controllers\CategoryController;
 use Familienkalender\Controllers\EventController;
 use Familienkalender\Controllers\IcsExportController;
 use Familienkalender\Controllers\MemberController;
@@ -60,6 +61,13 @@ function buildApiRouter(): Router
     $router->get('/api/events/{id}/reminders', [$reminders, 'index'], [$authMiddleware]);
     $router->post('/api/events/{id}/reminders', [$reminders, 'create'], [$authMiddleware]);
     $router->delete('/api/reminders/{id}', [$reminders, 'destroy'], [$authMiddleware]);
+
+    // -- Termin-Kategorien (geschützt, Verwaltung nur im "plus"-Plan) -------
+    $categories = new CategoryController();
+    $router->get('/api/categories', [$categories, 'index'], [$authMiddleware]);
+    $router->post('/api/categories', [$categories, 'create'], [$authMiddleware]);
+    $router->put('/api/categories/{id}', [$categories, 'update'], [$authMiddleware]);
+    $router->delete('/api/categories/{id}', [$categories, 'destroy'], [$authMiddleware]);
 
     // -- Push-Benachrichtigungen (geschützt, optional - siehe PushSender) ---
     $push = new PushSubscriptionController();
