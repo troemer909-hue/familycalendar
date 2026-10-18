@@ -132,7 +132,7 @@ $statusLabels = [
       <label>Name der Quelle</label>
       <input type="text" name="name" placeholder="z.B. Fußballverein Trainingsplan" required />
       <label>ICS-Adresse (URL)</label>
-      <input type="text" name="source_url" placeholder="https://..." required />
+      <input type="text" name="source_url" placeholder="https://... oder webcal://..." required />
       <label>Sync-Intervall (Minuten)</label>
       <input type="number" name="sync_interval_minutes" value="60" min="5" />
       <label>Nur für eine Person eintragen (optional, sonst ganze Familie)</label>

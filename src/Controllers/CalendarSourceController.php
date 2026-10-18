@@ -114,8 +114,20 @@ final class CalendarSourceController
         if ($name === '' || $url === '') {
             Response::error('name und source_url sind erforderlich.', 422);
         }
+
+        // "Kalenderabo"-Buttons (z.B. fussball.de, Vereins-/Sportseiten)
+        // geben die Adresse fast immer als webcal://... aus - das ist nur
+        // eine Konvention fürs Betriebssystem, den Link automatisch an die
+        // Standard-Kalender-App zu übergeben, kein eigenes Protokoll. Der
+        // eigentliche Abruf läuft danach ganz normal über HTTPS (siehe
+        // CalendarSync::fetchUrl) - ohne diese Normalisierung würde jeder
+        // per Copy&Paste eingefügte webcal://-Link hier abgelehnt.
+        if (preg_match('#^webcal://#i', $url)) {
+            $url = 'https://' . substr($url, strlen('webcal://'));
+        }
+
         if (!filter_var($url, FILTER_VALIDATE_URL) || !preg_match('#^https?://#i', $url)) {
-            Response::error('source_url ist keine gültige http(s)-Adresse.', 422);
+            Response::error('source_url ist keine gültige http(s)- oder webcal-Adresse.', 422);
         }
 
         $memberId = $request->input('family_member_id');
