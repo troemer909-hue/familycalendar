@@ -92,17 +92,22 @@ final class SelfUpdateController
             $migrationsApplied = $runner->applyPending();
 
             $this->logRun($db, $oldCommit, $newCommit, $migrationsApplied, true, null);
-
-            Response::json([
-                'old_commit' => $oldCommit,
-                'new_commit' => $newCommit,
-                'migrations_applied' => $migrationsApplied,
-                'already_up_to_date' => $oldCommit === $newCommit && $migrationsApplied === [],
-            ]);
         } catch (\Throwable $e) {
             $this->logRun($db, $oldCommit, $newCommit, $migrationsApplied, false, $e->getMessage());
             Response::error('Update fehlgeschlagen: ' . $e->getMessage(), 500);
         }
+
+        // Außerhalb des try-Blocks: Response::json() wirft im Capture-Modus
+        // (siehe LocalApiClient) selbst eine ResponseCaptured-Exception als
+        // Kontrollfluss-Signal - stünde dieser Aufruf noch im try, würde das
+        // eigene catch(\Throwable) oben sie fälschlich als echten Fehler
+        // abfangen und ein ERFOLGREICHES Update als "fehlgeschlagen" melden.
+        Response::json([
+            'old_commit' => $oldCommit,
+            'new_commit' => $newCommit,
+            'migrations_applied' => $migrationsApplied,
+            'already_up_to_date' => $oldCommit === $newCommit && $migrationsApplied === [],
+        ]);
     }
 
     private function isEnabled(): bool
