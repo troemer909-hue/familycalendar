@@ -54,10 +54,9 @@ function pwaHeadTags(): string
     // eigenen Engagement-Heuristiken (u.a. mehrfacher Besuch mit
     // zeitlichem Abstand) - das Ereignis selbst (beforeinstallprompt)
     // kommt aber zuverlässig, sobald die Installierbarkeits-Kriterien
-    // erfüllt sind. Hier abgefangen und für einen eigenen, sofort
-    // sichtbaren "App installieren"-Button in der Sidebar aufgehoben
-    // (siehe appChromeOpen()/appChromeClose()), statt auf den
-    // Browser-Zufall zu warten.
+    // erfüllt sind. Hier abgefangen und für den eigenen Installations-
+    // Banner oben auf der Seite aufgehoben (siehe appChromeOpen()/
+    // appChromeClose()), statt auf den Browser-Zufall zu warten.
     window.addEventListener('beforeinstallprompt', function (e) {
       e.preventDefault();
       window.__fkInstallPrompt = e;
@@ -282,6 +281,11 @@ function appChromeOpen(string $activeNav, string $extraSidebarHtml = '', string 
 
     ob_start();
     ?>
+<div id="fk-install-banner" class="install-banner" hidden>
+  <span class="install-banner-text" data-install-banner-text>Family-Kalender als App installieren - schneller Zugriff vom Startbildschirm.</span>
+  <button type="button" class="btn btn-primary install-banner-btn" data-install-banner-action>Installieren</button>
+  <button type="button" class="install-banner-dismiss" data-install-banner-dismiss aria-label="Banner schließen">&times;</button>
+</div>
 <div class="app-layout">
   <header class="mobile-topbar">
     <button type="button" class="sidebar-toggle" data-sidebar-trigger aria-label="Menü öffnen" aria-expanded="false" aria-controls="app-sidebar">
@@ -292,10 +296,6 @@ function appChromeOpen(string $activeNav, string $extraSidebarHtml = '', string 
   <div class="sidebar-backdrop" data-sidebar-backdrop></div>
   <aside class="sidebar" id="app-sidebar">
     <?= brandLogo() ?>
-    <button type="button" id="fk-install-btn" class="btn btn-secondary install-btn" hidden>
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-      App installieren
-    </button>
     <?= $extraSidebarHtml ?>
 
     <nav class="sidebar-nav">
@@ -429,33 +429,90 @@ function appChromeClose(string $activeNav): string
     });
   })();
 
-  // "App installieren"-Button in der Sidebar: bleibt per [hidden]
-  // unsichtbar, bis beforeinstallprompt gefeuert hat (siehe
-  // pwaHeadTags()) - Chrome entscheidet selbst, WANN das passiert
-  // (Engagement-Heuristiken), aber sobald es so weit ist, zeigen wir den
-  // Button sofort statt auf Chromes eigenes (seltener erscheinendes)
-  // Banner zu warten.
+  // "App installieren"-Banner oben auf der Seite statt eines Menü-
+  // Eintrags - verschwindet automatisch, sobald die App bereits
+  // installiert/im Standalone-Modus läuft, und bietet auf Browsern ohne
+  // beforeinstallprompt-Unterstützung (Firefox, viele Samsung-Internet-
+  // Versionen) eine manuelle Anleitung statt gar nichts zu zeigen oder
+  // einen Button, der beim Klick wirkungslos bleibt.
   (function () {
-    var btn = document.getElementById('fk-install-btn');
-    if (!btn) return;
+    var banner = document.getElementById('fk-install-banner');
+    if (!banner) return;
 
-    function reveal() {
-      if (window.__fkInstallPrompt) {
-        btn.hidden = false;
-      }
+    var isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true; // iOS Safari
+    if (isStandalone) return; // bereits installiert - Banner bleibt dauerhaft versteckt
+
+    if (sessionStorage.getItem('fk_install_banner_dismissed') === '1') return;
+
+    var textEl = banner.querySelector('[data-install-banner-text]');
+    var actionBtn = banner.querySelector('[data-install-banner-action]');
+    var dismissBtn = banner.querySelector('[data-install-banner-dismiss]');
+
+    var ua = navigator.userAgent || '';
+    var isIOS = /iPad|iPhone|iPod/.test(ua);
+    var isSamsung = /SamsungBrowser/.test(ua);
+    var isFirefox = /Firefox/.test(ua);
+
+    function showBanner() {
+      banner.hidden = false;
     }
-    reveal(); // falls beforeinstallprompt schon VOR diesem Script feuerte
-    document.addEventListener('fk:install-available', reveal);
-    document.addEventListener('fk:install-done', function () { btn.hidden = true; });
-
-    btn.addEventListener('click', function () {
-      if (!window.__fkInstallPrompt) return;
-      window.__fkInstallPrompt.prompt();
-      window.__fkInstallPrompt.userChoice.finally(function () {
-        window.__fkInstallPrompt = null;
-        btn.hidden = true;
-      });
+    function hideBanner() {
+      banner.hidden = true;
+    }
+    dismissBtn.addEventListener('click', function () {
+      sessionStorage.setItem('fk_install_banner_dismissed', '1');
+      hideBanner();
     });
+    document.addEventListener('fk:install-done', hideBanner);
+
+    // Fall 1: beforeinstallprompt wird unterstützt (Chrome, Edge, neuere
+    // Samsung-Internet-Versionen) - Klick löst den echten, nativen
+    // Installations-Dialog aus.
+    function useNativePrompt() {
+      actionBtn.textContent = 'Installieren';
+      actionBtn.onclick = function () {
+        if (!window.__fkInstallPrompt) return;
+        window.__fkInstallPrompt.prompt();
+        window.__fkInstallPrompt.userChoice.finally(function () {
+          window.__fkInstallPrompt = null;
+          hideBanner();
+        });
+      };
+      showBanner();
+    }
+
+    // Fall 2: keine native Installations-API verfügbar - Anleitung statt
+    // eines Buttons, der nichts täte (genau das war vorher auf Firefox
+    // und manchen Samsung-Internet-Versionen der Fall).
+    function useManualInstructions() {
+      if (isIOS) {
+        textEl.textContent = 'Als App installieren: Teilen-Symbol antippen, dann "Zum Home-Bildschirm".';
+      } else if (isSamsung) {
+        textEl.textContent = 'Als App installieren: Menü (☰) antippen, dann "Seite hinzufügen zu" → "Startbildschirm".';
+      } else if (isFirefox) {
+        textEl.textContent = 'Dieser Browser unterstützt die automatische Installation nicht - in Chrome oder Samsung Internet öffnen, um die App zu installieren.';
+      } else {
+        textEl.textContent = 'Als App installieren: über das Browser-Menü "Zum Startbildschirm hinzufügen" wählen.';
+      }
+      actionBtn.remove(); // kein Button nötig/möglich, nur die Anleitung + Schließen-Button bleiben
+      showBanner();
+    }
+
+    if (window.__fkInstallPrompt) {
+      useNativePrompt();
+      return;
+    }
+    document.addEventListener('fk:install-available', useNativePrompt, { once: true });
+
+    // Kurze Wartezeit, ob beforeinstallprompt noch feuert (kann nach dem
+    // Laden etwas verzögert kommen) - danach auf die manuelle Anleitung
+    // zurückfallen, statt den Banner ewig versteckt zu lassen.
+    setTimeout(function () {
+      if (!window.__fkInstallPrompt && banner.hidden) {
+        useManualInstructions();
+      }
+    }, 1500);
   })();
 
   // Stunden-Zeitraster der Wochenansicht (siehe calendar.php): startet
