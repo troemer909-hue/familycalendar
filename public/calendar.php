@@ -211,29 +211,103 @@ echo appChromeOpen('calendar', $memberChipsHtml, $mainAttrs);
         <?php endforeach; ?>
       </div>
 
+    <?php elseif ($view === 'week'): ?>
+
+      <div class="week-grid">
+        <div class="week-grid-header">
+          <div class="week-grid-time-gutter"></div>
+          <?php for ($day = $gridStart; $day <= $gridEnd; $day = $day->modify('+1 day')):
+            $dayStr = $day->format('Y-m-d');
+            $isToday = $dayStr === $today;
+          ?>
+            <div class="week-grid-daylabel<?= $isToday ? ' today' : '' ?>">
+              <span class="weekday-label"><?= $weekdayLabels[((int) $day->format('N')) - 1] ?></span>
+              <a class="day-number" href="<?= h(buildCalendarUrl('day', $monthParam, $dayStr, $hiddenIds)) ?>"><?= (int) $day->format('j') ?></a>
+            </div>
+          <?php endfor; ?>
+        </div>
+
+        <div class="week-grid-allday">
+          <div class="week-grid-time-gutter"></div>
+          <?php for ($day = $gridStart; $day <= $gridEnd; $day = $day->modify('+1 day')):
+            $dayStr = $day->format('Y-m-d');
+            $allDayEvents = array_filter($eventsByDay[$dayStr] ?? [], static fn (array $ev): bool => !empty($ev['all_day']));
+          ?>
+            <div class="week-grid-allday-cell">
+              <?php foreach ($allDayEvents as $ev):
+                $isFamily = $ev['scope'] === 'family';
+                $color = eventColor($ev, $membersById);
+              ?>
+                <a href="event_form.php?id=<?= (int) $ev['id'] ?>&back=<?= urlencode($back) ?>"
+                   class="event-chip<?= $isFamily ? ' family-event' : '' ?>"
+                   style="<?= $isFamily ? '' : 'background:' . h($color) ?>">
+                  <?= $isFamily ? '👪 ' : '' ?><?= h($ev['title']) ?>
+                </a>
+              <?php endforeach; ?>
+            </div>
+          <?php endfor; ?>
+        </div>
+
+        <div class="week-grid-body" data-week-scroll>
+          <div class="week-grid-hours">
+            <?php for ($h = 0; $h < 24; $h++): ?>
+              <div class="week-grid-hour-label" style="top: calc(var(--week-hour-height) * <?= $h ?>);"><?= sprintf('%02d:00', $h) ?></div>
+            <?php endfor; ?>
+          </div>
+          <div class="week-grid-days">
+            <?php
+            $nowMinutes = ((int) date('H')) * 60 + (int) date('i');
+            for ($day = $gridStart; $day <= $gridEnd; $day = $day->modify('+1 day')):
+                $dayStr = $day->format('Y-m-d');
+                $isToday = $dayStr === $today;
+                $timedEvents = array_values(array_filter($eventsByDay[$dayStr] ?? [], static fn (array $ev): bool => empty($ev['all_day'])));
+                $laidOut = layoutWeekDayEvents($timedEvents, $dayStr);
+            ?>
+              <div class="week-grid-day-col">
+                <?php for ($h = 0; $h < 24; $h++): ?>
+                  <div class="week-grid-hour-line" style="top: calc(var(--week-hour-height) * <?= $h ?>);"></div>
+                <?php endfor; ?>
+                <?php if ($isToday): ?>
+                  <div class="week-grid-now-line" style="top: calc(var(--week-hour-height) * <?= $nowMinutes ?> / 60);"></div>
+                <?php endif; ?>
+                <?php foreach ($laidOut as $item):
+                  $ev = $item['event'];
+                  $isFamily = $ev['scope'] === 'family';
+                  $color = eventColor($ev, $membersById);
+                  $topFactor = $item['startMinutes'] / 60;
+                  $heightFactor = ($item['endMinutes'] - $item['startMinutes']) / 60;
+                  $widthPct = 100 / $item['cols'];
+                  $leftPct = $widthPct * $item['col'];
+                ?>
+                  <a href="event_form.php?id=<?= (int) $ev['id'] ?>&back=<?= urlencode($back) ?>"
+                     class="week-event<?= $isFamily ? ' family-event' : '' ?>"
+                     style="<?= $isFamily ? '' : 'background:' . h($color) . ';' ?>top: calc(var(--week-hour-height) * <?= $topFactor ?>); height: calc(var(--week-hour-height) * <?= $heightFactor ?> - 2px); left: calc(<?= $leftPct ?>% + 1px); width: calc(<?= $widthPct ?>% - 2px);">
+                    <span class="week-event-time"><?= h(substr($ev['starts_at'], 11, 5)) ?></span>
+                    <span class="week-event-title"><?= $isFamily ? '👪 ' : '' ?><?= h($ev['title']) ?></span>
+                  </a>
+                <?php endforeach; ?>
+              </div>
+            <?php endfor; ?>
+          </div>
+        </div>
+      </div>
+
     <?php else: ?>
 
-      <div class="calendar-grid<?= $view === 'week' ? ' view-week' : '' ?>">
+      <div class="calendar-grid">
         <?php foreach ($weekdayLabels as $wd): ?>
           <div class="calendar-weekday"><?= $wd ?></div>
         <?php endforeach; ?>
 
         <?php for ($day = $gridStart; $day <= $gridEnd; $day = $day->modify('+1 day')):
           $dayStr = $day->format('Y-m-d');
-          $isOtherMonth = $view === 'month' && $day->format('Y-m') !== $monthStart->format('Y-m');
+          $isOtherMonth = $day->format('Y-m') !== $monthStart->format('Y-m');
           $isToday = $dayStr === $today;
           $dayEvents = $eventsByDay[$dayStr] ?? [];
         ?>
           <div class="calendar-day<?= $isOtherMonth ? ' other-month' : '' ?><?= $isToday ? ' today' : '' ?>">
             <div class="day-header">
-              <?php if ($view === 'week'): ?>
-                <span class="weekday-label"><?= $weekdayLabels[((int) $day->format('N')) - 1] ?></span>
-              <?php endif; ?>
-              <?php if ($view === 'month'): ?>
-                <a class="day-number" href="<?= h(buildCalendarUrl('day', $monthParam, $dayStr, $hiddenIds)) ?>"><?= (int) $day->format('j') ?></a>
-              <?php else: ?>
-                <span class="day-number"><?= (int) $day->format('j') ?></span>
-              <?php endif; ?>
+              <a class="day-number" href="<?= h(buildCalendarUrl('day', $monthParam, $dayStr, $hiddenIds)) ?>"><?= (int) $day->format('j') ?></a>
               <a class="add-link" href="event_form.php?date=<?= h($dayStr) ?>&back=<?= urlencode($back) ?>" title="Termin anlegen">+</a>
             </div>
             <?php foreach ($dayEvents as $ev):
