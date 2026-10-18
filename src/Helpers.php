@@ -309,6 +309,10 @@ function appChromeOpen(string $activeNav, string $extraSidebarHtml = '', string 
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12a8 8 0 0 1 14.6-4.6M20 12a8 8 0 0 1-14.6 4.6"/><path d="M18.6 3.4V8h-4.6M5.4 20.6V16H10"/></svg>
           <span>Kalenderquellen verwalten</span>
         </a>
+        <a href="categories.php" class="<?= $navClass('categories') ?>">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h4v4H4zM10 7h10M4 13h4v4H4zM10 13h10"/></svg>
+          <span>Kategorien</span>
+        </a>
         <a href="ics_export.php" class="<?= $navClass('ics') ?>">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
           <span>Kalender-Abo (ICS-Export)</span>

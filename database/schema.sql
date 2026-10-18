@@ -144,6 +144,26 @@ CREATE TABLE IF NOT EXISTS event_participants (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------
+-- Frei verwaltbare Termin-Kategorien - NUR für Familien im "plus"-Plan
+-- relevant (siehe CategoryController::familyPlanCode()). Familien im
+-- "standard"-Plan sehen stattdessen eine feste, serverseitig definierte
+-- Auswahlliste (siehe CategoryController::DEFAULT_CATEGORIES) und legen
+-- hier nie eigene Zeilen an. events.category bleibt bewusst ein reines
+-- Freitextfeld (keine Fremdschlüssel-Beziehung zu categories.id) - ein
+-- gelöschtes/umbenanntes Kategorie-Label soll bereits vergebene Termine
+-- nicht invalidieren, genau wie beim bisherigen Freitext-Verhalten.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS categories (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  family_id INT NOT NULL,
+  name VARCHAR(50) NOT NULL,
+  color VARCHAR(20) NOT NULL DEFAULT '#64748b',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE CASCADE,
+  UNIQUE KEY uniq_family_category_name (family_id, name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------
 -- Erinnerungen (nur für Personen mit Login)
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS reminders (
@@ -266,7 +286,8 @@ INSERT IGNORE INTO schema_migrations (migration) VALUES
   ('009_ics_export_token.sql'),
   ('010_member_invites.sql'),
   ('011_self_update.sql'),
-  ('012_shorten_indexed_varchars.sql');
+  ('012_shorten_indexed_varchars.sql'),
+  ('013_categories.sql');
 
 CREATE TABLE IF NOT EXISTS self_update_runs (
   id INT PRIMARY KEY AUTO_INCREMENT,

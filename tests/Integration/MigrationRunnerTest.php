@@ -43,10 +43,13 @@ final class MigrationRunnerTest extends TestCase
         $runner = new MigrationRunner($this->db, $this->migrationsDir);
         $applied = $runner->applyPending();
 
-        // Nur die Bootstrap-Migration selbst wird ausgeführt - 002-010
-        // dürfen NICHT erneut laufen (sie würden an bereits vorhandenen
-        // Spalten/Schlüsseln scheitern).
-        self::assertSame(['011_self_update.sql', '012_shorten_indexed_varchars.sql'], $applied);
+        // Nur die Bootstrap-Migration selbst und alles danach wird
+        // ausgeführt - 002-010 dürfen NICHT erneut laufen (sie würden an
+        // bereits vorhandenen Spalten/Schlüsseln scheitern).
+        self::assertSame(
+            ['011_self_update.sql', '012_shorten_indexed_varchars.sql', '013_categories.sql'],
+            $applied
+        );
 
         $recorded = $this->db->query('SELECT migration FROM schema_migrations ORDER BY migration')
             ->fetchAll(PDO::FETCH_COLUMN);

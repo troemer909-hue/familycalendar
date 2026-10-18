@@ -8,6 +8,10 @@ $membersRes = $client->request('GET', '/api/members');
 handleUnauthorized($membersRes);
 $members = $membersRes['ok'] ? $membersRes['data'] : [];
 
+$categoriesRes = $client->request('GET', '/api/categories');
+handleUnauthorized($categoriesRes);
+$categories = $categoriesRes['ok'] ? ($categoriesRes['data']['categories'] ?? []) : [];
+
 $back = sanitizeCalendarBack($_GET['back'] ?? '');
 $eventId = isset($_GET['id']) ? (int) $_GET['id'] : null;
 $error = $_GET['error'] ?? null;
@@ -160,7 +164,25 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
       <input type="text" name="location" value="<?= h($locationValue) ?>" />
 
       <label>Kategorie</label>
-      <input type="text" name="category" value="<?= h($categoryValue) ?>" placeholder="z.B. Schule, Sport, Arzt" />
+      <select name="category">
+        <option value="">Keine</option>
+        <?php
+        $categoryNames = array_column($categories, 'name');
+        if ($categoryValue !== '' && !in_array($categoryValue, $categoryNames, true)) {
+            // Termin trägt eine Kategorie, die es in der aktuellen Liste
+            // nicht (mehr) gibt (z.B. gelöscht, oder noch Freitext aus der
+            // Zeit vor dem Dropdown) - als Option erhalten, damit sie beim
+            // Speichern nicht stillschweigend verloren geht.
+            $categories[] = ['name' => $categoryValue, 'color' => '#94a3b8'];
+        }
+        foreach ($categories as $c):
+        ?>
+          <option value="<?= h($c['name']) ?>" <?= $categoryValue === $c['name'] ? 'selected' : '' ?>><?= h($c['name']) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <?php if (empty($categories)): ?>
+        <p class="hint-text">Keine Kategorien verfügbar. <a href="categories.php">Kategorien verwalten</a></p>
+      <?php endif; ?>
 
       <label>Beschreibung</label>
       <textarea name="description" rows="3"><?= h($descriptionValue) ?></textarea>
