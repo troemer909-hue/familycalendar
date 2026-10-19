@@ -14,6 +14,7 @@ use Familienkalender\Controllers\NotificationPreferenceController;
 use Familienkalender\Controllers\PushSubscriptionController;
 use Familienkalender\Controllers\ReminderController;
 use Familienkalender\Controllers\SelfUpdateController;
+use Familienkalender\Controllers\TaskListController;
 use Familienkalender\Core\Response;
 use Familienkalender\Core\Router;
 use Familienkalender\Middleware\AuthMiddleware;
@@ -68,6 +69,16 @@ function buildApiRouter(): Router
     $router->post('/api/categories', [$categories, 'create'], [$authMiddleware]);
     $router->put('/api/categories/{id}', [$categories, 'update'], [$authMiddleware]);
     $router->delete('/api/categories/{id}', [$categories, 'destroy'], [$authMiddleware]);
+
+    // -- Aufgabenlisten (geschützt, kein Plan-Gating - siehe TaskListController) --
+    $taskLists = new TaskListController();
+    $router->get('/api/task-lists', [$taskLists, 'index'], [$authMiddleware]);
+    $router->post('/api/task-lists', [$taskLists, 'create'], [$authMiddleware]);
+    $router->delete('/api/task-lists/{id}', [$taskLists, 'destroy'], [$authMiddleware]);
+    $router->get('/api/task-lists/{id}/tasks', [$taskLists, 'tasks'], [$authMiddleware]);
+    $router->post('/api/task-lists/{id}/tasks', [$taskLists, 'createTask'], [$authMiddleware]);
+    $router->put('/api/tasks/{id}', [$taskLists, 'updateTask'], [$authMiddleware]);
+    $router->delete('/api/tasks/{id}', [$taskLists, 'deleteTask'], [$authMiddleware]);
 
     // -- Push-Benachrichtigungen (geschützt, optional - siehe PushSender) ---
     $push = new PushSubscriptionController();

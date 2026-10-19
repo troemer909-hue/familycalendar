@@ -178,6 +178,13 @@ function formatGermanDateTime(string $mysqlDatetime): string
     return $dt ? $dt->format('d.m.Y H:i') : $mysqlDatetime;
 }
 
+/** "2026-10-03" -> "03.10.2026" */
+function formatGermanDate(string $mysqlDate): string
+{
+    $dt = \DateTimeImmutable::createFromFormat('Y-m-d', $mysqlDate);
+    return $dt ? $dt->format('d.m.Y') : $mysqlDate;
+}
+
 /** Farbe für einen Termin-Chip: Familientermine grau, sonst Farbe des ersten Teilnehmers. */
 function eventColor(array $event, array $membersById): string
 {
@@ -263,8 +270,8 @@ function sanitizeCalendarBack(string $back): string
  * nur in calendar.php, wodurch das Footer-Menü beim Aufruf jeder anderen
  * Seite (Mitglieder, Kalenderquellen, Einstellungen, ...) verschwand.
  * $activeNav steuert, welcher Sidebar-/Footer-Eintrag als aktiv markiert
- * wird: 'calendar' | 'members' | 'sources' | 'ics' | 'push' |
- * 'notifications' | 'admin'. $extraSidebarHtml ist zusätzlicher Inhalt
+ * wird: 'calendar' | 'members' | 'sources' | 'categories' | 'tasks' |
+ * 'ics' | 'push' | 'notifications' | 'admin'. $extraSidebarHtml ist zusätzlicher Inhalt
  * ganz oben in der Sidebar (aktuell nur von calendar.php für den
  * Mitglieder-Sichtbarkeitsfilter genutzt). $mainAttrs sind zusätzliche
  * Attribute auf dem <main>-Tag (aktuell nur von calendar.php für die
@@ -312,6 +319,10 @@ function appChromeOpen(string $activeNav, string $extraSidebarHtml = '', string 
         <a href="categories.php" class="<?= $navClass('categories') ?>">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h4v4H4zM10 7h10M4 13h4v4H4zM10 13h10"/></svg>
           <span>Kategorien</span>
+        </a>
+        <a href="task_lists.php" class="<?= $navClass('tasks') ?>">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l2 2 4-4"/><rect x="3" y="4" width="18" height="17" rx="2"/></svg>
+          <span>Aufgabenlisten</span>
         </a>
         <a href="ics_export.php" class="<?= $navClass('ics') ?>">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
