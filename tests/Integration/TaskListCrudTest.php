@@ -240,4 +240,51 @@ final class TaskListCrudTest extends TestCase
 
         self::assertCount(0, $dueForB['data'], 'Familie B darf fällige Aufgaben von Familie A nicht sehen.');
     }
+
+    public function testListCanBeAssignedToAFamilyMember(): void
+    {
+        $client = $this->loggedInClient();
+
+        $member = $client->request('POST', '/api/members', ['display_name' => 'Kind', 'display_color' => '#ff0000']);
+        self::assertTrue($member['ok'], json_encode($member));
+        $memberId = $member['data']['id'];
+
+        $createList = $client->request('POST', '/api/task-lists', [
+            'name' => 'Aufgaben fürs Kind',
+            'assigned_member_id' => $memberId,
+        ]);
+        self::assertTrue($createList['ok'], json_encode($createList));
+
+        $index = $client->request('GET', '/api/task-lists');
+        self::assertSame($memberId, $index['data'][0]['assigned_member_id']);
+        self::assertSame('Kind', $index['data'][0]['assigned_member_name']);
+    }
+
+    public function testListAssignmentToAForeignFamilyMemberIsRejected(): void
+    {
+        $familyA = $this->loggedInClient('a@example.test');
+        $familyB = $this->loggedInClient('b@example.test');
+
+        $foreignMember = $familyB->request('POST', '/api/members', ['display_name' => 'Fremd', 'display_color' => '#00ff00']);
+        $foreignMemberId = $foreignMember['data']['id'];
+
+        $createList = $familyA->request('POST', '/api/task-lists', [
+            'name' => 'Liste A',
+            'assigned_member_id' => $foreignMemberId,
+        ]);
+
+        self::assertFalse($createList['ok']);
+        self::assertSame(422, $createList['status']);
+    }
+
+    public function testListWithoutAssignmentHasNullAssignedMember(): void
+    {
+        $client = $this->loggedInClient();
+
+        $client->request('POST', '/api/task-lists', ['name' => 'Gemeinsame Liste']);
+
+        $index = $client->request('GET', '/api/task-lists');
+        self::assertNull($index['data'][0]['assigned_member_id']);
+        self::assertNull($index['data'][0]['assigned_member_name']);
+    }
 }

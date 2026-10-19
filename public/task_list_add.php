@@ -5,8 +5,11 @@ requireCsrf();
 
 $client = currentApiClient();
 
+$assignedMemberId = !empty($_POST['assigned_member_id']) ? (int) $_POST['assigned_member_id'] : null;
+
 $res = $client->request('POST', '/api/task-lists', [
     'name' => trim($_POST['name'] ?? ''),
+    'assigned_member_id' => $assignedMemberId,
 ]);
 handleUnauthorized($res);
 

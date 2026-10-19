@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Familienkalender\Controllers;
 
 use Familienkalender\Core\Database;
+use Familienkalender\Core\PushSender;
 use Familienkalender\Core\Request;
 use Familienkalender\Core\Response;
 use Familienkalender\Core\RRule;
@@ -27,13 +28,14 @@ final class TaskListController
     {
         $db = Database::connection();
         $stmt = $db->prepare(
-            'SELECT tl.id, tl.name, tl.created_at,
+            'SELECT tl.id, tl.name, tl.created_at, tl.assigned_member_id, fm.display_name AS assigned_member_name,
                     COUNT(t.id) AS total_count,
                     COUNT(t.id) - SUM(t.is_done) AS open_count
              FROM task_lists tl
              LEFT JOIN tasks t ON t.task_list_id = tl.id
+             LEFT JOIN family_members fm ON fm.id = tl.assigned_member_id
              WHERE tl.family_id = :family_id
-             GROUP BY tl.id, tl.name, tl.created_at
+             GROUP BY tl.id, tl.name, tl.created_at, tl.assigned_member_id, fm.display_name
              ORDER BY tl.created_at ASC'
         );
         $stmt->execute(['family_id' => TenantContext::familyId()]);
@@ -41,6 +43,8 @@ final class TaskListController
         $lists = array_map(static fn (array $row): array => [
             'id' => (int) $row['id'],
             'name' => $row['name'],
+            'assigned_member_id' => $row['assigned_member_id'] !== null ? (int) $row['assigned_member_id'] : null,
+            'assigned_member_name' => $row['assigned_member_name'],
             'total_count' => (int) $row['total_count'],
             'open_count' => (int) $row['open_count'],
         ], $stmt->fetchAll());
@@ -88,7 +92,13 @@ final class TaskListController
 
     /**
      * POST /api/task-lists
-     * Body: { name }
+     * Body: { name, assigned_member_id? }
+     *
+     * assigned_member_id (optional) markiert die Liste als "für diese
+     * Person" (z.B. ein Elternteil legt eine Liste fürs Kind an) - löst
+     * dabei eine Push-Benachrichtigung an diese Person aus, sofern sie ein
+     * eigenes Login + Push-Abo hat. KEINE Zugriffsbeschränkung: die Liste
+     * bleibt für die ganze Familie sichtbar/bearbeitbar wie jede andere.
      */
     public function create(Request $request): void
     {
@@ -99,14 +109,24 @@ final class TaskListController
             Response::error('name ist erforderlich (max. 120 Zeichen).', 422);
         }
 
-        $db->prepare('INSERT INTO task_lists (family_id, name, created_by) VALUES (:family_id, :name, :created_by)')
-            ->execute([
-                'family_id' => TenantContext::familyId(),
-                'name' => $name,
-                'created_by' => TenantContext::familyMemberId(),
-            ]);
+        $assignedMemberId = $this->sanitizeAssignedMember($db, $request->input('assigned_member_id'));
 
-        Response::json(['id' => (int) $db->lastInsertId(), 'name' => $name], 201);
+        $db->prepare(
+            'INSERT INTO task_lists (family_id, name, assigned_member_id, created_by)
+             VALUES (:family_id, :name, :assigned_member_id, :created_by)'
+        )->execute([
+            'family_id' => TenantContext::familyId(),
+            'name' => $name,
+            'assigned_member_id' => $assignedMemberId,
+            'created_by' => TenantContext::familyMemberId(),
+        ]);
+        $listId = (int) $db->lastInsertId();
+
+        if ($assignedMemberId !== null) {
+            $this->notifyAssignedMember($db, $assignedMemberId, $listId, $name);
+        }
+
+        Response::json(['id' => $listId, 'name' => $name], 201);
     }
 
     /**
@@ -328,6 +348,37 @@ final class TaskListController
     }
 
     /** Leerstring/0/null -> NULL, sonst muss die Mitglieds-ID zur eigenen Familie gehören. */
+    /**
+     * Push-Benachrichtigung an die Person, der eine Liste zugewiesen
+     * wurde. Rein informativ (reiner Best-Effort): fehlt ein eigenes
+     * Login (member_type "profile", z.B. bei jüngeren Kindern ohne
+     * eigenes Konto), gibt es keinen User-Datensatz und damit kein Ziel -
+     * dann passiert bewusst nichts, kein Fehler. Genauso, wenn Push auf
+     * diesem Server nicht konfiguriert ist oder (noch) kein Gerät
+     * abonniert hat (siehe PushSender::sendToUser()).
+     */
+    private function notifyAssignedMember(\PDO $db, int $memberId, int $listId, string $listName): void
+    {
+        $stmt = $db->prepare('SELECT user_id FROM family_members WHERE id = :id');
+        $stmt->execute(['id' => $memberId]);
+        $userId = $stmt->fetchColumn();
+
+        if (!$userId) {
+            return;
+        }
+
+        try {
+            PushSender::sendToUser(
+                (int) $userId,
+                'Neue Aufgabenliste für dich',
+                $listName,
+                '/task_list_view.php?id=' . $listId
+            );
+        } catch (\Throwable $e) {
+            error_log('Push für zugewiesene Aufgabenliste fehlgeschlagen (task_list ' . $listId . '): ' . $e->getMessage());
+        }
+    }
+
     private function sanitizeAssignedMember(\PDO $db, mixed $value): ?int
     {
         if ($value === null || $value === '' || (int) $value === 0) {
