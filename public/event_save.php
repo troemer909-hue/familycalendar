@@ -58,6 +58,12 @@ if (!$id) {
             $payload['recurrence_rule'] = "FREQ={$freqMap[$repeatFreq]};COUNT={$count}";
         }
     }
+
+    // Checkbox fehlt im POST-Body komplett, wenn sie abgewählt wurde (HTML-
+    // Standardverhalten) - isset() ist hier also die richtige Abfrage, kein
+    // Vergleich gegen einen gesendeten Wert.
+    $payload['add_reminder'] = isset($_POST['add_reminder']);
+    $payload['reminder_minutes'] = (int) ($_POST['reminder_minutes'] ?? 30);
 }
 
 $res = $id
