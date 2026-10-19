@@ -7,6 +7,7 @@ namespace Familienkalender\Controllers;
 use Familienkalender\Core\Database;
 use Familienkalender\Core\Request;
 use Familienkalender\Core\Response;
+use Familienkalender\Core\RRule;
 use Familienkalender\Core\TenantContext;
 
 /**
@@ -122,7 +123,17 @@ final class TaskListController
 
     /**
      * POST /api/task-lists/{id}/tasks
-     * Body: { title, assigned_member_id?, due_date? }
+     * Body: { title, assigned_member_id?, due_date?, recurrence_rule? }
+     *
+     * recurrence_rule (optional) erzeugt mehrere unabhängige Aufgaben auf
+     * einmal (z.B. "jeden Montag Müll rausbringen") - wiederverwendet
+     * dieselbe RRule-Klasse wie EventController::create(), aber OHNE
+     * dessen Serien-Tracking (recurrence_parent_id/-rule): jede erzeugte
+     * Aufgabe ist eine ganz normale, eigenständige Zeile, einzeln
+     * umbenennbar/verschiebbar/löschbar, ohne Rückwirkung auf die
+     * "Geschwister". Für Aufgaben reicht das - anders als bei Terminen
+     * gibt es hier keinen Bedarf, eine ganze Serie nachträglich auf einen
+     * Schlag zu verschieben.
      */
     public function createTask(Request $request): void
     {
@@ -137,18 +148,41 @@ final class TaskListController
 
         $assignedMemberId = $this->sanitizeAssignedMember($db, $request->input('assigned_member_id'));
         $dueDate = $this->sanitizeDueDate($request->input('due_date'));
+        $recurrenceRule = trim((string) $request->input('recurrence_rule', '')) ?: null;
 
-        $db->prepare(
+        $dueDates = [$dueDate];
+        if ($recurrenceRule !== null) {
+            if ($dueDate === null) {
+                Response::error('Eine Wiederholung braucht ein Fälligkeitsdatum.', 422);
+            }
+
+            try {
+                $start = new \DateTimeImmutable($dueDate);
+                $occurrences = RRule::expand($recurrenceRule, $start, $start);
+            } catch (\Throwable $e) {
+                Response::error('Wiederholung konnte nicht verarbeitet werden: ' . $e->getMessage(), 422);
+            }
+
+            $dueDates = array_map(static fn (array $o): string => $o['starts_at']->format('Y-m-d'), $occurrences);
+        }
+
+        $insert = $db->prepare(
             'INSERT INTO tasks (task_list_id, title, assigned_member_id, due_date)
              VALUES (:task_list_id, :title, :assigned_member_id, :due_date)'
-        )->execute([
-            'task_list_id' => $listId,
-            'title' => $title,
-            'assigned_member_id' => $assignedMemberId,
-            'due_date' => $dueDate,
-        ]);
+        );
 
-        Response::json(['id' => (int) $db->lastInsertId()], 201);
+        $firstId = null;
+        foreach ($dueDates as $occurrenceDueDate) {
+            $insert->execute([
+                'task_list_id' => $listId,
+                'title' => $title,
+                'assigned_member_id' => $assignedMemberId,
+                'due_date' => $occurrenceDueDate,
+            ]);
+            $firstId ??= (int) $db->lastInsertId();
+        }
+
+        Response::json(['id' => $firstId, 'occurrences' => count($dueDates)], 201);
     }
 
     /**

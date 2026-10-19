@@ -97,8 +97,24 @@ $error = $_GET['error'] ?? null;
           <option value="<?= (int) $m['id'] ?>"><?= h($m['display_name']) ?></option>
         <?php endforeach; ?>
       </select>
-      <label>Fällig am (optional)</label>
+      <label>Fällig am (optional, Pflicht bei Wiederholung)</label>
       <input type="date" name="due_date" />
+      <label>Wiederholung (optional)</label>
+      <select name="repeat_freq">
+        <option value="none">Keine Wiederholung</option>
+        <option value="daily">Täglich</option>
+        <option value="weekly">Wöchentlich</option>
+        <option value="monthly">Monatlich</option>
+        <option value="yearly">Jährlich</option>
+      </select>
+      <div class="row" style="margin-top:6px;align-items:center;">
+        <label class="checkbox-label"><input type="radio" name="repeat_end_type" value="count" checked /> Anzahl Wiederholungen</label>
+        <input type="number" name="repeat_count" value="8" min="1" max="366" />
+      </div>
+      <div class="row" style="align-items:center;">
+        <label class="checkbox-label"><input type="radio" name="repeat_end_type" value="until" /> Enddatum</label>
+        <input type="date" name="repeat_until" />
+      </div>
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">Hinzufügen</button>
       </div>

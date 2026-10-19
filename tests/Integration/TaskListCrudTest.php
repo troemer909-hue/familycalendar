@@ -94,6 +94,53 @@ final class TaskListCrudTest extends TestCase
         self::assertSame('2026-06-01', $tasks['data'][0]['due_date']);
     }
 
+    public function testRecurringTaskCreatesIndependentOccurrences(): void
+    {
+        $client = $this->loggedInClient();
+
+        $createList = $client->request('POST', '/api/task-lists', ['name' => 'Haushalt']);
+        $listId = $createList['data']['id'];
+
+        $createTask = $client->request('POST', "/api/task-lists/{$listId}/tasks", [
+            'title' => 'Müll rausbringen',
+            'due_date' => '2026-01-05',
+            'recurrence_rule' => 'FREQ=WEEKLY;COUNT=4',
+        ]);
+        self::assertTrue($createTask['ok'], json_encode($createTask));
+        self::assertSame(4, $createTask['data']['occurrences']);
+
+        $tasks = $client->request('GET', "/api/task-lists/{$listId}/tasks");
+        self::assertCount(4, $tasks['data']);
+        $dueDates = array_map(static fn (array $t): string => $t['due_date'], $tasks['data']);
+        sort($dueDates);
+        self::assertSame(['2026-01-05', '2026-01-12', '2026-01-19', '2026-01-26'], $dueDates);
+
+        // Jede Instanz ist eigenständig - eine einzelne abzuhaken darf die
+        // anderen nicht berühren (kein Serien-Tracking wie bei Terminen).
+        $toggle = $client->request('PUT', "/api/tasks/{$tasks['data'][0]['id']}", ['is_done' => true]);
+        self::assertTrue($toggle['ok']);
+
+        $tasksAfterToggle = $client->request('GET', "/api/task-lists/{$listId}/tasks");
+        $doneCount = count(array_filter($tasksAfterToggle['data'], static fn (array $t): bool => $t['is_done']));
+        self::assertSame(1, $doneCount, 'Nur die abgehakte Instanz darf erledigt sein, nicht die ganze Serie.');
+    }
+
+    public function testRecurringTaskWithoutDueDateIsRejected(): void
+    {
+        $client = $this->loggedInClient();
+
+        $createList = $client->request('POST', '/api/task-lists', ['name' => 'Haushalt']);
+        $listId = $createList['data']['id'];
+
+        $createTask = $client->request('POST', "/api/task-lists/{$listId}/tasks", [
+            'title' => 'Müll rausbringen',
+            'recurrence_rule' => 'FREQ=WEEKLY;COUNT=4',
+        ]);
+
+        self::assertFalse($createTask['ok']);
+        self::assertSame(422, $createTask['status']);
+    }
+
     public function testAssigningToAForeignFamilyMemberIsRejected(): void
     {
         $familyA = $this->loggedInClient('a@example.test');
