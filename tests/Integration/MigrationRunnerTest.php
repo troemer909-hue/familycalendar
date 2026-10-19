@@ -47,7 +47,7 @@ final class MigrationRunnerTest extends TestCase
         // ausgeführt - 002-010 dürfen NICHT erneut laufen (sie würden an
         // bereits vorhandenen Spalten/Schlüsseln scheitern).
         self::assertSame(
-            ['011_self_update.sql', '012_shorten_indexed_varchars.sql', '013_categories.sql', '014_task_lists.sql', '015_task_list_assignment.sql'],
+            ['011_self_update.sql', '012_shorten_indexed_varchars.sql', '013_categories.sql', '014_task_lists.sql', '015_task_list_assignment.sql', '016_calendar_source_reminders.sql'],
             $applied
         );
 
