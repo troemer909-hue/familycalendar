@@ -10,10 +10,12 @@ $listId = (int) ($_POST['list_id'] ?? 0);
 $res = $client->request('DELETE', "/api/tasks/{$id}");
 handleUnauthorized($res);
 
+$fromForm = $_POST['redirect'] ?? null;
+
 if (!$res['ok']) {
-    header('Location: task_list_view.php?id=' . $listId . '&error=' . urlencode($res['data']['error'] ?? 'Aufgabe konnte nicht gelöscht werden.'));
+    header('Location: ' . taskListRedirectUrl($listId, $fromForm, $res['data']['error'] ?? 'Aufgabe konnte nicht gelöscht werden.'));
     exit;
 }
 
-header('Location: task_list_view.php?id=' . $listId);
+header('Location: ' . taskListRedirectUrl($listId, $fromForm));
 exit;

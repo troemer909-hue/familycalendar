@@ -18,5 +18,6 @@ if (!$res['ok']) {
     exit;
 }
 
-header('Location: task_list_view.php?id=' . (int) $res['data']['id']);
+$newListId = (int) $res['data']['id'];
+header('Location: task_lists.php?open=' . $newListId . '#list-' . $newListId);
 exit;

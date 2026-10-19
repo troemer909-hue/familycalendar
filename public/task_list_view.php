@@ -73,12 +73,14 @@ $error = $_GET['error'] ?? null;
                 <input type="hidden" name="id" value="<?= (int) $t['id'] ?>" />
                 <input type="hidden" name="list_id" value="<?= $listId ?>" />
                 <input type="hidden" name="is_done" value="<?= $t['is_done'] ? '0' : '1' ?>" />
+                <input type="hidden" name="redirect" value="view" />
                 <button type="submit" class="btn btn-secondary"><?= $t['is_done'] ? 'Zurücksetzen' : 'Erledigt' ?></button>
               </form>
               <form method="post" action="task_delete.php" style="margin:0;">
                 <?= csrfField() ?>
                 <input type="hidden" name="id" value="<?= (int) $t['id'] ?>" />
                 <input type="hidden" name="list_id" value="<?= $listId ?>" />
+                <input type="hidden" name="redirect" value="view" />
                 <button type="submit" class="btn btn-danger">Entfernen</button>
               </form>
             </div>
@@ -91,6 +93,7 @@ $error = $_GET['error'] ?? null;
     <form method="post" action="task_add.php">
       <?= csrfField() ?>
       <input type="hidden" name="list_id" value="<?= $listId ?>" />
+      <input type="hidden" name="redirect" value="view" />
       <label>Titel</label>
       <input type="text" name="title" placeholder="z.B. Milch kaufen" required />
       <label>Zuweisen (optional)</label>

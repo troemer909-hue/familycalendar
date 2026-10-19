@@ -206,6 +206,26 @@ function reminderMinuteOptions(): array
 }
 
 /**
+ * Ziel-URL nach einer Aufgaben-Aktion (anlegen/abhaken/löschen) -
+ * standardmäßig zurück zur Listenübersicht (task_lists.php, mit der
+ * betroffenen Liste aufgeklappt), damit alles von dort aus bedienbar
+ * bleibt. Kommt das Formular dagegen von der Einzelansicht
+ * (task_list_view.php, z.B. über einen Termin-Chip im Kalender oder einen
+ * Push-Link erreicht - siehe redirect="view" dort), geht es dorthin
+ * zurück statt zur Übersicht zu springen.
+ */
+function taskListRedirectUrl(int $listId, ?string $fromForm, ?string $error = null): string
+{
+    $errorParam = $error !== null ? '&error=' . urlencode($error) : '';
+
+    if ($fromForm === 'view') {
+        return "task_list_view.php?id={$listId}{$errorParam}";
+    }
+
+    return "task_lists.php?open={$listId}{$errorParam}#list-{$listId}";
+}
+
+/**
  * Farbe für einen Termin-Chip: Termine aus einer importierten/abonnierten
  * Kalenderquelle bekommen immer deren feste Quellen-Farbe (unabhängig
  * davon, welcher Person sie zugeordnet sind - siehe calendar_sources.color/

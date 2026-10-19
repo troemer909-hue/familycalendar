@@ -472,6 +472,17 @@ button, .btn {
 .badge.profile { background: #fef3c7; color: #92400e; }
 .badge.admin { background: #dbeafe; color: #1e40af; }
 .badge.trial { background: #fef3c7; color: #92400e; }
+
+/* Aufgabenlisten-Übersicht: jede Liste ist ein aufklappbares <details>,
+   damit Aufgaben direkt auf dieser einen Seite abgehakt/angelegt/gelöscht
+   werden können - vorher nur über eine zusätzliche Klick-Ebene
+   (task_list_view.php) erreichbar. */
+.task-list-details { background: #f8f9fb; border-radius: 10px; margin-bottom: 10px; padding: 2px 14px; }
+.task-list-details summary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 0; cursor: pointer; list-style: none; }
+.task-list-details summary::-webkit-details-marker { display: none; }
+.task-list-details summary::before { content: '▸'; color: #94a3b8; transition: transform .15s; }
+.task-list-details[open] summary::before { transform: rotate(90deg); }
+.task-list-details[open] { padding-bottom: 14px; }
 .badge.active { background: #dcfce7; color: #166534; }
 .badge.suspended { background: #fee2e2; color: #b91c1c; }
 .badge.cancelled { background: #e5e7eb; color: #4b5563; }

@@ -11,10 +11,12 @@ $isDone = ($_POST['is_done'] ?? '0') === '1';
 $res = $client->request('PUT', "/api/tasks/{$id}", ['is_done' => $isDone]);
 handleUnauthorized($res);
 
+$fromForm = $_POST['redirect'] ?? null;
+
 if (!$res['ok']) {
-    header('Location: task_list_view.php?id=' . $listId . '&error=' . urlencode($res['data']['error'] ?? 'Aufgabe konnte nicht aktualisiert werden.'));
+    header('Location: ' . taskListRedirectUrl($listId, $fromForm, $res['data']['error'] ?? 'Aufgabe konnte nicht aktualisiert werden.'));
     exit;
 }
 
-header('Location: task_list_view.php?id=' . $listId);
+header('Location: ' . taskListRedirectUrl($listId, $fromForm));
 exit;
