@@ -185,6 +185,26 @@ function formatGermanDate(string $mysqlDate): string
     return $dt ? $dt->format('d.m.Y') : $mysqlDate;
 }
 
+/**
+ * Gemeinsame Optionsliste für jedes "Erinnerung X Minuten/Stunden/Tage
+ * vorher"-Dropdown der App (Termin-Formular, Aufgabenlisten/Erinnerungen
+ * weiter unten, Kalenderquellen-Formulare) - eine Quelle statt mehrerer
+ * potenziell abweichender Kopien.
+ *
+ * @return array<int,string>
+ */
+function reminderMinuteOptions(): array
+{
+    return [
+        15 => '15 Minuten vorher',
+        30 => '30 Minuten vorher',
+        60 => '1 Stunde vorher',
+        120 => '2 Stunden vorher',
+        1440 => '1 Tag vorher',
+        2880 => '2 Tage vorher',
+    ];
+}
+
 /** Farbe für einen Termin-Chip: Familientermine grau, sonst Farbe des ersten Teilnehmers. */
 function eventColor(array $event, array $membersById): string
 {

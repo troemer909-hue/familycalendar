@@ -45,11 +45,9 @@ if ($prefsRes['ok']) {
     $reminderDefaultMinutes = $prefsRes['data']['reminder_default_minutes'];
 }
 
-// Gemeinsame Liste für BEIDE Erinnerungs-Dropdowns dieser Seite (die neue
-// "beim Anlegen automatisch für alle markierten Personen" weiter unten UND
-// das bestehende "Meine Erinnerungen hinzufügen" bei bestehenden Terminen)
-// - eine einzige Quelle statt zweier potenziell abweichender Kopien.
-$reminderMinuteOptions = [15 => '15 Minuten vorher', 30 => '30 Minuten vorher', 60 => '1 Stunde vorher', 120 => '2 Stunden vorher', 1440 => '1 Tag vorher', 2880 => '2 Tage vorher'];
+// Siehe reminderMinuteOptions() in Helpers.php - eine Quelle für jedes
+// "Erinnerung X vorher"-Dropdown der App statt mehrerer Kopien.
+$reminderMinuteOptions = reminderMinuteOptions();
 
 function formatReminderOffset(int $minutes): string
 {

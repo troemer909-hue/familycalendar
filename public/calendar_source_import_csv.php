@@ -9,6 +9,7 @@ $client = currentApiClient();
 
 $name = trim($_POST['name'] ?? '');
 $familyMemberId = !empty($_POST['family_member_id']) ? (int) $_POST['family_member_id'] : null;
+$reminderMinutes = !empty($_POST['reminder_minutes']) ? (int) $_POST['reminder_minutes'] : null;
 
 $redirectError = function (string $message): void {
     header('Location: calendar_sources.php?error=' . urlencode($message));
@@ -36,6 +37,7 @@ $res = $client->request('POST', '/api/calendar-sources/import-csv', [
     'name' => $name,
     'csv_content' => $content,
     'family_member_id' => $familyMemberId,
+    'reminder_minutes' => $reminderMinutes,
 ]);
 handleUnauthorized($res);
 

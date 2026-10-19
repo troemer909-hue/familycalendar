@@ -9,6 +9,7 @@ $name = trim($_POST['name'] ?? '');
 $sourceUrl = trim($_POST['source_url'] ?? '');
 $interval = (int) ($_POST['sync_interval_minutes'] ?? 60);
 $familyMemberId = !empty($_POST['family_member_id']) ? (int) $_POST['family_member_id'] : null;
+$reminderMinutes = !empty($_POST['reminder_minutes']) ? (int) $_POST['reminder_minutes'] : null;
 
 if ($name === '' || $sourceUrl === '') {
     header('Location: calendar_sources.php?error=' . urlencode('Bitte Name und ICS-Adresse angeben.'));
@@ -20,6 +21,7 @@ $res = $client->request('POST', '/api/calendar-sources/stream', [
     'source_url' => $sourceUrl,
     'sync_interval_minutes' => $interval,
     'family_member_id' => $familyMemberId,
+    'reminder_minutes' => $reminderMinutes,
 ]);
 handleUnauthorized($res);
 

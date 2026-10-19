@@ -28,7 +28,7 @@ final class CalendarSourceController
     {
         $db = Database::connection();
         $stmt = $db->prepare(
-            'SELECT id, name, type, source_url, sync_interval_minutes, last_synced_at, status, family_member_id
+            'SELECT id, name, type, source_url, sync_interval_minutes, default_reminder_minutes, last_synced_at, status, family_member_id
              FROM calendar_sources
              WHERE family_id = :family_id
              ORDER BY created_at DESC'
@@ -40,8 +40,15 @@ final class CalendarSourceController
 
     /**
      * POST /api/calendar-sources/import-ics
-     * Body: { name, ics_content, family_member_id? }
+     * Body: { name, ics_content, family_member_id?, reminder_minutes? }
      * Einmaliger Import einer .ics-Datei (z.B. Export aus Outlook/Google).
+     *
+     * reminder_minutes (optional) legt für jeden Teilnehmer MIT eigenem
+     * Login eine Erinnerung für jeden importierten Termin an - fehlt das
+     * Feld/ist es leer, bekommt keiner automatisch eine Erinnerung (anders
+     * als bei EventController::create(): ein Import kann aus Dutzenden
+     * Terminen auf einmal bestehen, "standardmäßig an" wäre dort schnell
+     * Benachrichtigungs-Spam statt einer bewussten Entscheidung).
      */
     public function importIcs(Request $request): void
     {
@@ -60,8 +67,9 @@ final class CalendarSourceController
         }
 
         $memberId = $request->input('family_member_id');
-        $sourceId = $this->createSourceRow('import_ics', $name, null, null, $memberId);
-        $count = $this->importEvents($sourceId, 'import', $events, $memberId);
+        $reminderMinutes = $this->sanitizeReminderMinutes($request->input('reminder_minutes'));
+        $sourceId = $this->createSourceRow('import_ics', $name, null, null, $memberId, $reminderMinutes);
+        $count = $this->importEvents($sourceId, 'import', $events, $memberId, $reminderMinutes);
         $this->markSynced($sourceId);
 
         Response::json(['id' => $sourceId, 'imported' => $count], 201);
@@ -69,7 +77,7 @@ final class CalendarSourceController
 
     /**
      * POST /api/calendar-sources/import-csv
-     * Body: { name, csv_content, family_member_id? }
+     * Body: { name, csv_content, family_member_id?, reminder_minutes? }
      * Einmaliger Import einer CSV-Tabelle (Spalten: Titel, Beginn, Ende, ...).
      */
     public function importCsv(Request $request): void
@@ -89,8 +97,9 @@ final class CalendarSourceController
         }
 
         $memberId = $request->input('family_member_id');
-        $sourceId = $this->createSourceRow('import_csv', $name, null, null, $memberId);
-        $count = $this->importEvents($sourceId, 'import', $events, $memberId);
+        $reminderMinutes = $this->sanitizeReminderMinutes($request->input('reminder_minutes'));
+        $sourceId = $this->createSourceRow('import_csv', $name, null, null, $memberId, $reminderMinutes);
+        $count = $this->importEvents($sourceId, 'import', $events, $memberId, $reminderMinutes);
         $this->markSynced($sourceId);
 
         Response::json(['id' => $sourceId, 'imported' => $count], 201);
@@ -98,10 +107,14 @@ final class CalendarSourceController
 
     /**
      * POST /api/calendar-sources/stream
-     * Body: { name, source_url, sync_interval_minutes?, family_member_id? }
+     * Body: { name, source_url, sync_interval_minutes?, family_member_id?,
+     *         reminder_minutes? }
      * Legt ein laufendes ICS-Abonnement an und synchronisiert sofort einmal.
      * Für die wiederkehrende Aktualisierung siehe bin/sync-calendar-sources.php
      * (per Cron-Job aufzurufen - Shared Hosting kennt keine Hintergrund-Jobs).
+     * reminder_minutes wird auf der Quelle gespeichert (siehe createSourceRow())
+     * und gilt dadurch auch für künftige, über den Cron-Job nachgezogene
+     * Termine - nicht nur für den initialen Sync hier.
      */
     public function createStream(Request $request): void
     {
@@ -110,6 +123,7 @@ final class CalendarSourceController
         $name = trim((string) $request->input('name', ''));
         $url = trim((string) $request->input('source_url', ''));
         $interval = (int) $request->input('sync_interval_minutes', 60);
+        $reminderMinutes = $this->sanitizeReminderMinutes($request->input('reminder_minutes'));
 
         if ($name === '' || $url === '') {
             Response::error('name und source_url sind erforderlich.', 422);
@@ -131,7 +145,7 @@ final class CalendarSourceController
         }
 
         $memberId = $request->input('family_member_id');
-        $sourceId = $this->createSourceRow('stream_ics', $name, $url, max(5, $interval), $memberId);
+        $sourceId = $this->createSourceRow('stream_ics', $name, $url, max(5, $interval), $memberId, $reminderMinutes);
 
         $this->runSync($sourceId);
 
@@ -171,14 +185,22 @@ final class CalendarSourceController
         Response::json(['status' => 'deleted']);
     }
 
-    private function createSourceRow(string $type, string $name, ?string $url, ?int $interval, mixed $familyMemberId): int
-    {
+    private function createSourceRow(
+        string $type,
+        string $name,
+        ?string $url,
+        ?int $interval,
+        mixed $familyMemberId,
+        ?int $reminderMinutes = null
+    ): int {
         $db = Database::connection();
         $memberId = $familyMemberId ? $this->assertOwnMember($db, (int) $familyMemberId) : null;
 
         $db->prepare(
-            'INSERT INTO calendar_sources (family_id, family_member_id, name, type, source_url, sync_interval_minutes, status)
-             VALUES (:family_id, :family_member_id, :name, :type, :source_url, :interval, "active")'
+            'INSERT INTO calendar_sources
+                (family_id, family_member_id, name, type, source_url, sync_interval_minutes, default_reminder_minutes, status)
+             VALUES
+                (:family_id, :family_member_id, :name, :type, :source_url, :interval, :reminder_minutes, "active")'
         )->execute([
             'family_id' => TenantContext::familyId(),
             'family_member_id' => $memberId,
@@ -186,6 +208,7 @@ final class CalendarSourceController
             'type' => $type,
             'source_url' => $url,
             'interval' => $interval,
+            'reminder_minutes' => $reminderMinutes,
         ]);
 
         return (int) $db->lastInsertId();
@@ -199,6 +222,21 @@ final class CalendarSourceController
             Response::error('Person nicht gefunden.', 404);
         }
         return $memberId;
+    }
+
+    /** Leerstring/0/null -> keine Erinnerung, sonst 1-10080 Minuten (7 Tage, wie bei ReminderController). */
+    private function sanitizeReminderMinutes(mixed $value): ?int
+    {
+        if ($value === null || $value === '' || (int) $value === 0) {
+            return null;
+        }
+
+        $minutes = (int) $value;
+        if ($minutes < 1 || $minutes > 10080) {
+            Response::error('reminder_minutes muss zwischen 1 und 10080 (7 Tage) liegen.', 422);
+        }
+
+        return $minutes;
     }
 
     private function markSynced(int $sourceId): void
@@ -244,14 +282,15 @@ final class CalendarSourceController
      * @param array<int, array{uid:string,title:string,description:?string,location:?string,
      *                          starts_at:string,ends_at:string,all_day:bool}> $events
      */
-    private function importEvents(int $sourceId, string $eventSource, array $events, mixed $assignMemberId): int
+    private function importEvents(int $sourceId, string $eventSource, array $events, mixed $assignMemberId, ?int $reminderMinutes = null): int
     {
         return CalendarSync::importEvents(
             TenantContext::familyId(),
             $sourceId,
             $eventSource,
             $events,
-            $assignMemberId ? (int) $assignMemberId : null
+            $assignMemberId ? (int) $assignMemberId : null,
+            $reminderMinutes
         );
     }
 }

@@ -42,7 +42,10 @@ final class CalendarSync
     /**
      * Lädt + parst eine stream_ics-Quelle und schreibt die Termine fort.
      * $source ist eine Zeile aus calendar_sources (id, family_id,
-     * source_url, family_member_id).
+     * source_url, family_member_id, default_reminder_minutes) - läuft bei
+     * jedem (auch künftigen, über den Cron-Job nachgezogenen) Sync erneut
+     * durch, damit auch neu im Feed auftauchende Termine die bei der
+     * Einrichtung gewählte Standard-Erinnerung bekommen.
      */
     public static function syncStreamSource(array $source): int
     {
@@ -54,7 +57,8 @@ final class CalendarSync
             (int) $source['id'],
             'stream',
             $events,
-            $source['family_member_id'] !== null ? (int) $source['family_member_id'] : null
+            $source['family_member_id'] !== null ? (int) $source['family_member_id'] : null,
+            $source['default_reminder_minutes'] !== null ? (int) $source['default_reminder_minutes'] : null
         );
     }
 
@@ -64,6 +68,12 @@ final class CalendarSync
      * $assignMemberId nur diese Person (scope=personal), sonst alle
      * aktuellen Mitglieder der Familie (scope=family).
      *
+     * $reminderMinutes (optional) legt für jeden Teilnehmer MIT eigenem
+     * Login eine Erinnerung an (analog zu EventController::create() bei
+     * manuell angelegten Terminen) - Teilnehmer ohne Login (reine Profile)
+     * werden stillschweigend übersprungen, es gibt für sie kein Postfach/
+     * Gerät zum Benachrichtigen.
+     *
      * @param array<int, array{uid:string,title:string,description:?string,location:?string,
      *                          starts_at:string,ends_at:string,all_day:bool}> $events
      */
@@ -72,7 +82,8 @@ final class CalendarSync
         int $sourceId,
         string $eventSource,
         array $events,
-        ?int $assignMemberId
+        ?int $assignMemberId,
+        ?int $reminderMinutes = null
     ): int {
         $db = Database::connection();
 
@@ -126,8 +137,44 @@ final class CalendarSync
             foreach ($participantIds as $memberId) {
                 $addParticipant->execute(['event_id' => $eventId, 'member_id' => $memberId]);
             }
+
+            if ($reminderMinutes !== null) {
+                self::insertDefaultReminders($db, $eventId, $participantIds, $reminderMinutes);
+            }
         }
 
         return count($events);
+    }
+
+    /**
+     * Identische Logik zu EventController::insertDefaultReminders() - hier
+     * dupliziert statt geteilt, weil CalendarSync bewusst OHNE
+     * TenantContext auskommt (läuft auch aus dem Cron-Job, der keinen
+     * eingeloggten Nutzer kennt), EventController aber darauf aufbaut.
+     */
+    private static function insertDefaultReminders(\PDO $db, int $eventId, array $participantIds, int $minutes): void
+    {
+        $memberIds = array_unique(array_map('intval', $participantIds));
+        if (empty($memberIds)) {
+            return;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($memberIds), '?'));
+        $stmt = $db->prepare("SELECT user_id FROM family_members WHERE id IN ({$placeholders}) AND user_id IS NOT NULL");
+        $stmt->execute(array_values($memberIds));
+        $userIds = array_unique(array_map('intval', array_column($stmt->fetchAll(), 'user_id')));
+
+        if (empty($userIds)) {
+            return;
+        }
+
+        $insert = $db->prepare(
+            'INSERT INTO reminders (event_id, user_id, remind_before_minutes, sent)
+             VALUES (:event_id, :user_id, :minutes, 0)
+             ON DUPLICATE KEY UPDATE sent = 0'
+        );
+        foreach ($userIds as $userId) {
+            $insert->execute(['event_id' => $eventId, 'user_id' => $userId, 'minutes' => $minutes]);
+        }
     }
 }

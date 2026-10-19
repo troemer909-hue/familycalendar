@@ -84,6 +84,11 @@ CREATE TABLE IF NOT EXISTS calendar_sources (
   type ENUM('import_ics','import_csv','stream_ics') NOT NULL,
   source_url TEXT NULL,
   sync_interval_minutes INT NULL,
+  -- Optional: jeder Teilnehmer MIT eigenem Login bekommt bei jedem
+  -- Import/Sync dieser Quelle automatisch eine Erinnerung mit dieser
+  -- Vorlaufzeit (siehe CalendarSourceController/CalendarSync). NULL =
+  -- keine automatischen Erinnerungen für diese Quelle.
+  default_reminder_minutes INT NULL,
   last_synced_at DATETIME NULL,
   status ENUM('active','error','paused') NOT NULL DEFAULT 'active',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -329,7 +334,8 @@ INSERT IGNORE INTO schema_migrations (migration) VALUES
   ('012_shorten_indexed_varchars.sql'),
   ('013_categories.sql'),
   ('014_task_lists.sql'),
-  ('015_task_list_assignment.sql');
+  ('015_task_list_assignment.sql'),
+  ('016_calendar_source_reminders.sql');
 
 CREATE TABLE IF NOT EXISTS self_update_runs (
   id INT PRIMARY KEY AUTO_INCREMENT,

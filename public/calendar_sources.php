@@ -25,6 +25,7 @@ $statusLabels = [
     'error' => 'Fehler',
     'paused' => 'Pausiert',
 ];
+$reminderMinuteOptions = reminderMinuteOptions();
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -65,6 +66,9 @@ $statusLabels = [
                 <?php if ($s['last_synced_at']): ?>
                   · zuletzt synchronisiert: <?= h(formatGermanDateTime($s['last_synced_at'])) ?>
                 <?php endif; ?>
+                <?php if (!empty($s['default_reminder_minutes'])): ?>
+                  · 🔔 <?= h($reminderMinuteOptions[(int) $s['default_reminder_minutes']] ?? $s['default_reminder_minutes'] . ' Min. vorher') ?>
+                <?php endif; ?>
               </span>
             </div>
             <div style="display:flex;gap:8px;">
@@ -100,6 +104,14 @@ $statusLabels = [
           <option value="<?= (int) $m['id'] ?>"><?= h($m['display_name']) ?></option>
         <?php endforeach; ?>
       </select>
+      <label>Erinnerung für importierte Termine (optional)</label>
+      <select name="reminder_minutes">
+        <option value="">Keine automatische Erinnerung</option>
+        <?php foreach ($reminderMinuteOptions as $value => $label): ?>
+          <option value="<?= $value ?>"><?= h($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <p class="hint-text">Gilt für jede Person mit eigenem Login, die am importierten Termin beteiligt ist.</p>
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">Importieren</button>
       </div>
@@ -120,6 +132,14 @@ $statusLabels = [
           <option value="<?= (int) $m['id'] ?>"><?= h($m['display_name']) ?></option>
         <?php endforeach; ?>
       </select>
+      <label>Erinnerung für importierte Termine (optional)</label>
+      <select name="reminder_minutes">
+        <option value="">Keine automatische Erinnerung</option>
+        <?php foreach ($reminderMinuteOptions as $value => $label): ?>
+          <option value="<?= $value ?>"><?= h($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <p class="hint-text">Gilt für jede Person mit eigenem Login, die am importierten Termin beteiligt ist.</p>
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">Importieren</button>
       </div>
@@ -142,6 +162,18 @@ $statusLabels = [
           <option value="<?= (int) $m['id'] ?>"><?= h($m['display_name']) ?></option>
         <?php endforeach; ?>
       </select>
+      <label>Erinnerung für Termine aus diesem Abo (optional)</label>
+      <select name="reminder_minutes">
+        <option value="">Keine automatische Erinnerung</option>
+        <?php foreach ($reminderMinuteOptions as $value => $label): ?>
+          <option value="<?= $value ?>"><?= h($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <p class="hint-text">
+        Gilt auch für neue Termine, die bei künftigen automatischen
+        Synchronisierungen hinzukommen - für jede Person mit eigenem Login,
+        die beteiligt ist.
+      </p>
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">Abo einrichten</button>
         <div class="spacer"></div>
