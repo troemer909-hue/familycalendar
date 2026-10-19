@@ -198,4 +198,46 @@ final class TaskListCrudTest extends TestCase
         self::assertFalse($updateDeletedTask['ok']);
         self::assertSame(404, $updateDeletedTask['status']);
     }
+
+    public function testDueTasksReturnsOnlyOpenTasksInRangeAcrossLists(): void
+    {
+        $client = $this->loggedInClient();
+
+        $listA = $client->request('POST', '/api/task-lists', ['name' => 'Liste A']);
+        $listB = $client->request('POST', '/api/task-lists', ['name' => 'Liste B']);
+
+        $inRange = $client->request('POST', "/api/task-lists/{$listA['data']['id']}/tasks", [
+            'title' => 'Im Zeitraum', 'due_date' => '2026-07-10',
+        ]);
+        $client->request('POST', "/api/task-lists/{$listB['data']['id']}/tasks", [
+            'title' => 'Außerhalb des Zeitraums', 'due_date' => '2026-08-01',
+        ]);
+        $withoutDueDate = $client->request('POST', "/api/task-lists/{$listA['data']['id']}/tasks", [
+            'title' => 'Ohne Fälligkeitsdatum',
+        ]);
+        $doneInRange = $client->request('POST', "/api/task-lists/{$listA['data']['id']}/tasks", [
+            'title' => 'Erledigt im Zeitraum', 'due_date' => '2026-07-15',
+        ]);
+        $client->request('PUT', "/api/tasks/{$doneInRange['data']['id']}", ['is_done' => true]);
+
+        $due = $client->request('GET', '/api/tasks/due?from=2026-07-01&to=2026-07-31');
+        self::assertTrue($due['ok'], json_encode($due));
+        self::assertCount(1, $due['data'], 'Nur die offene Aufgabe im Zeitraum darf zurückkommen.');
+        self::assertSame('Im Zeitraum', $due['data'][0]['title']);
+        self::assertSame('Liste A', $due['data'][0]['task_list_name']);
+    }
+
+    public function testDueTasksAreScopedToOwnFamilyOnly(): void
+    {
+        $familyA = $this->loggedInClient('a@example.test');
+        $listA = $familyA->request('POST', '/api/task-lists', ['name' => 'Liste A']);
+        $familyA->request('POST', "/api/task-lists/{$listA['data']['id']}/tasks", [
+            'title' => 'Aufgabe von Familie A', 'due_date' => '2026-09-01',
+        ]);
+
+        $familyB = $this->loggedInClient('b@example.test');
+        $dueForB = $familyB->request('GET', '/api/tasks/due?from=2026-09-01&to=2026-09-30');
+
+        self::assertCount(0, $dueForB['data'], 'Familie B darf fällige Aufgaben von Familie A nicht sehen.');
+    }
 }

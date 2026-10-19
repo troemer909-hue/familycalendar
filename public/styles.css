@@ -348,6 +348,16 @@ button, .btn {
 .event-chip { display: block; font-size: 11px; padding: 2px 6px; border-radius: 5px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .event-chip.family-event { background: var(--navy); }
 
+/* Fällige Aufgaben im Kalender (siehe TaskListController::dueTasks()) -
+   bewusst optisch von Terminen unterscheidbar (Kontur statt Füllfarbe,
+   Checkbox-Symbol) statt wie ein weiterer Termin auszusehen. */
+.task-chip {
+  display: block; font-size: 11px; padding: 1px 6px; border-radius: 5px;
+  color: var(--teal); background: #fff; border: 1px solid var(--teal);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.task-chip-dot { background: #fff; border: 2px solid var(--teal); }
+
 /* -------------------------- Wochenansicht (Stunden-Zeitraster) --------
    Wie bei Google Kalender: eine Ganztägig-Zeile oben, darunter 7
    Tagesspalten mit einer durchgehenden 00-24-Uhr-Zeitachse, Termine

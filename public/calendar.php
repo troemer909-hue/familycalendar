@@ -137,6 +137,19 @@ if ($view === 'day') {
     usort($dayEventsForAgenda, static fn (array $a, array $b) => strcmp($a['starts_at'], $b['starts_at']));
 }
 
+// -- Fällige Aufgaben laden (Phase 4 im Konzept: Kalender-Verzahnung) -------
+// Bewusst NUR offene Aufgaben (siehe TaskListController::dueTasks) und als
+// reine Tagesmarkierung dargestellt - KEINE events-Zeile, keine Vermischung
+// mit Terminen (siehe docs/aufgabenlisten-konzept.md).
+$tasksRes = $client->request('GET', "/api/tasks/due?from={$rangeFrom}&to={$rangeTo}");
+handleUnauthorized($tasksRes);
+$dueTasks = $tasksRes['ok'] ? $tasksRes['data'] : [];
+
+$tasksByDay = [];
+foreach ($dueTasks as $t) {
+    $tasksByDay[$t['due_date']][] = $t;
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -190,6 +203,22 @@ echo appChromeOpen('calendar', $memberChipsHtml, $mainAttrs);
 
     <?php if ($view === 'day'): ?>
 
+      <?php $dayTasks = $tasksByDay[$dateParam] ?? []; ?>
+      <?php if (!empty($dayTasks)): ?>
+        <div class="day-agenda" style="margin-bottom:12px;">
+          <?php foreach ($dayTasks as $t): ?>
+            <a href="task_list_view.php?id=<?= (int) $t['task_list_id'] ?>" class="day-event">
+              <span class="dot task-chip-dot"></span>
+              <span class="day-event-time">☐ Aufgabe</span>
+              <span class="day-event-body">
+                <span class="day-event-title"><?= h($t['title']) ?></span>
+                <span class="day-event-location"><?= h($t['task_list_name']) ?></span>
+              </span>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+
       <div class="day-agenda">
         <?php if (empty($dayEventsForAgenda)): ?>
           <p class="day-agenda-empty">Keine Termine an diesem Tag.</p>
@@ -232,6 +261,7 @@ echo appChromeOpen('calendar', $memberChipsHtml, $mainAttrs);
           <?php for ($day = $gridStart; $day <= $gridEnd; $day = $day->modify('+1 day')):
             $dayStr = $day->format('Y-m-d');
             $allDayEvents = array_filter($eventsByDay[$dayStr] ?? [], static fn (array $ev): bool => !empty($ev['all_day']));
+            $dayTasks = $tasksByDay[$dayStr] ?? [];
           ?>
             <div class="week-grid-allday-cell">
               <?php foreach ($allDayEvents as $ev):
@@ -242,6 +272,11 @@ echo appChromeOpen('calendar', $memberChipsHtml, $mainAttrs);
                    class="event-chip<?= $isFamily ? ' family-event' : '' ?>"
                    style="<?= $isFamily ? '' : 'background:' . h($color) ?>">
                   <?= $isFamily ? '👪 ' : '' ?><?= h($ev['title']) ?>
+                </a>
+              <?php endforeach; ?>
+              <?php foreach ($dayTasks as $t): ?>
+                <a href="task_list_view.php?id=<?= (int) $t['task_list_id'] ?>" class="task-chip" title="Aufgabe aus „<?= h($t['task_list_name']) ?>“">
+                  ☐ <?= h($t['title']) ?>
                 </a>
               <?php endforeach; ?>
             </div>
@@ -304,6 +339,7 @@ echo appChromeOpen('calendar', $memberChipsHtml, $mainAttrs);
           $isOtherMonth = $day->format('Y-m') !== $monthStart->format('Y-m');
           $isToday = $dayStr === $today;
           $dayEvents = $eventsByDay[$dayStr] ?? [];
+          $dayTasks = $tasksByDay[$dayStr] ?? [];
         ?>
           <div class="calendar-day<?= $isOtherMonth ? ' other-month' : '' ?><?= $isToday ? ' today' : '' ?>">
             <div class="day-header">
@@ -318,6 +354,11 @@ echo appChromeOpen('calendar', $memberChipsHtml, $mainAttrs);
                  class="event-chip<?= $isFamily ? ' family-event' : '' ?>"
                  style="<?= $isFamily ? '' : 'background:' . h($color) ?>">
                 <?= $isFamily ? '👪 ' : '' ?><?= h($ev['title']) ?>
+              </a>
+            <?php endforeach; ?>
+            <?php foreach ($dayTasks as $t): ?>
+              <a href="task_list_view.php?id=<?= (int) $t['task_list_id'] ?>" class="task-chip" title="Aufgabe aus „<?= h($t['task_list_name']) ?>“">
+                ☐ <?= h($t['title']) ?>
               </a>
             <?php endforeach; ?>
           </div>
