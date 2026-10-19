@@ -57,8 +57,20 @@ final class EventController
     /**
      * POST /api/events
      * Body: { title, starts_at, ends_at, all_day?, scope, participant_ids[]?,
-     *         description?, location?, recurrence_rule?, category? }
+     *         description?, location?, recurrence_rule?, category?,
+     *         add_reminder?, reminder_minutes? }
      * scope = 'family' -> für die ganze Familie, 'personal' -> participant_ids Pflicht.
+     *
+     * add_reminder (Default: true) legt beim Anlegen automatisch für JEDEN
+     * Teilnehmer mit eigenem Login eine Erinnerung an (nicht nur für den
+     * Ersteller) - Nutzer sollen sich aktiv abmelden müssen ("abwählen"),
+     * statt sich aktiv anmelden zu müssen. Teilnehmer ohne Login (reine
+     * Profile, siehe family_members.user_id) werden dabei übersprungen, es
+     * gibt für sie kein Postfach/Gerät zum Benachrichtigen. Jede einzelne
+     * Erinnerung bleibt danach ganz normal über
+     * reminders/{id} (ReminderController) persönlich entfernbar - diese
+     * Automatik ersetzt nur das manuelle "Erinnerung hinzufügen" direkt
+     * beim Anlegen, ändert aber nichts an deren Datenmodell.
      */
     public function create(Request $request): void
     {
@@ -68,6 +80,8 @@ final class EventController
         $scope = (string) $request->input('scope', 'personal');
         $participantIds = $request->input('participant_ids', []);
         $recurrenceRule = trim((string) $request->input('recurrence_rule', '')) ?: null;
+        $addReminder = filter_var($request->input('add_reminder', true), FILTER_VALIDATE_BOOLEAN);
+        $reminderMinutes = (int) $request->input('reminder_minutes', 30);
 
         if ($title === '' || $startsAt === '' || $endsAt === '') {
             Response::error('title, starts_at und ends_at sind erforderlich.', 422);
@@ -77,6 +91,9 @@ final class EventController
         }
         if ($scope === 'personal' && empty($participantIds)) {
             Response::error('Bei scope "personal" muss mindestens eine Person zugeordnet werden.', 422);
+        }
+        if ($addReminder && ($reminderMinutes < 1 || $reminderMinutes > 10080)) {
+            Response::error('reminder_minutes muss zwischen 1 und 10080 (7 Tage) liegen.', 422);
         }
 
         // Wiederholungsregel vorab validieren/auflösen, BEVOR die Transaktion
@@ -128,6 +145,9 @@ final class EventController
             }
 
             $this->syncParticipants($db, $eventId, $participantIds);
+            if ($addReminder) {
+                $this->insertDefaultReminders($db, $eventId, $participantIds, $reminderMinutes);
+            }
 
             // Wiederkehrende Termine: das erste Vorkommen IST der soeben
             // angelegte Master-Termin selbst. Ab dem zweiten Vorkommen
@@ -158,7 +178,11 @@ final class EventController
                     'parent_id' => $eventId,
                     'category' => $request->input('category'),
                 ]);
-                $this->syncParticipants($db, (int) $db->lastInsertId(), $participantIds);
+                $childEventId = (int) $db->lastInsertId();
+                $this->syncParticipants($db, $childEventId, $participantIds);
+                if ($addReminder) {
+                    $this->insertDefaultReminders($db, $childEventId, $participantIds, $reminderMinutes);
+                }
             }
 
             $db->commit();
@@ -330,6 +354,41 @@ final class EventController
         );
         foreach (array_unique(array_map('intval', $participantIds)) as $memberId) {
             $stmt->execute(['event_id' => $eventId, 'member_id' => $memberId]);
+        }
+    }
+
+    /**
+     * Legt für jeden Teilnehmer MIT eigenem Login eine Erinnerung an
+     * (reminders.user_id ist NOT NULL - ein reines Profil ohne Login hat
+     * kein Postfach/Gerät, das benachrichtigt werden könnte, wird also
+     * stillschweigend übersprungen statt einen Fehler zu werfen). Dieselbe
+     * ON DUPLICATE KEY-Absicherung wie in ReminderController::create() -
+     * identische Erinnerung (gleicher Nutzer/Vorlauf) wird nicht doppelt
+     * angelegt, "sent" wird nur zurückgesetzt.
+     */
+    private function insertDefaultReminders(\PDO $db, int $eventId, array $participantIds, int $minutes): void
+    {
+        $memberIds = array_unique(array_map('intval', $participantIds));
+        if (empty($memberIds)) {
+            return;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($memberIds), '?'));
+        $stmt = $db->prepare("SELECT user_id FROM family_members WHERE id IN ({$placeholders}) AND user_id IS NOT NULL");
+        $stmt->execute(array_values($memberIds));
+        $userIds = array_unique(array_map('intval', array_column($stmt->fetchAll(), 'user_id')));
+
+        if (empty($userIds)) {
+            return;
+        }
+
+        $insert = $db->prepare(
+            'INSERT INTO reminders (event_id, user_id, remind_before_minutes, sent)
+             VALUES (:event_id, :user_id, :minutes, 0)
+             ON DUPLICATE KEY UPDATE sent = 0'
+        );
+        foreach ($userIds as $userId) {
+            $insert->execute(['event_id' => $eventId, 'user_id' => $userId, 'minutes' => $minutes]);
         }
     }
 }

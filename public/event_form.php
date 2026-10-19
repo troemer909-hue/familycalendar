@@ -27,20 +27,29 @@ if ($eventId) {
     $event = $res['data'];
 }
 
-// -- Eigene Erinnerungen zu diesem Termin (nur bei bestehenden Terminen) ---
+// -- Erinnerungen -----------------------------------------------------------
+// "Meine Erinnerungen" (Liste/Entfernen) nur bei bestehenden Terminen (die
+// braucht eine event_id) - der eigene reminder_default_minutes-Vorschlags-
+// wert wird aber auf BEIDEN Formularen gebraucht (auch beim Neuanlegen,
+// fürs automatische "Erinnerung an alle markierten Personen senden").
 $reminders = [];
 $reminderDefaultMinutes = 30;
 if ($eventId) {
     $remindersRes = $client->request('GET', "/api/events/{$eventId}/reminders");
     handleUnauthorized($remindersRes);
     $reminders = $remindersRes['ok'] ? $remindersRes['data'] : [];
-
-    $prefsRes = $client->request('GET', '/api/notification-preferences');
-    handleUnauthorized($prefsRes);
-    if ($prefsRes['ok']) {
-        $reminderDefaultMinutes = $prefsRes['data']['reminder_default_minutes'];
-    }
 }
+$prefsRes = $client->request('GET', '/api/notification-preferences');
+handleUnauthorized($prefsRes);
+if ($prefsRes['ok']) {
+    $reminderDefaultMinutes = $prefsRes['data']['reminder_default_minutes'];
+}
+
+// Gemeinsame Liste für BEIDE Erinnerungs-Dropdowns dieser Seite (die neue
+// "beim Anlegen automatisch für alle markierten Personen" weiter unten UND
+// das bestehende "Meine Erinnerungen hinzufügen" bei bestehenden Terminen)
+// - eine einzige Quelle statt zweier potenziell abweichender Kopien.
+$reminderMinuteOptions = [15 => '15 Minuten vorher', 30 => '30 Minuten vorher', 60 => '1 Stunde vorher', 120 => '2 Stunden vorher', 1440 => '1 Tag vorher', 2880 => '2 Tage vorher'];
 
 function formatReminderOffset(int $minutes): string
 {
@@ -160,6 +169,23 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
         <?php endforeach; ?>
       </div>
 
+      <?php if (!$event): ?>
+        <label class="checkbox-label">
+          <input type="checkbox" name="add_reminder" value="1" checked /> Erinnerung an alle markierten Personen senden
+        </label>
+        <p class="hint-text">
+          Jede markierte Person mit eigenem Login bekommt automatisch eine
+          Erinnerung (per E-Mail/Push, je nach den eigenen Benachrichtigungs-
+          einstellungen) - abwählbar. Lässt sich pro Person danach weiterhin
+          einzeln über „Meine Erinnerungen" entfernen oder ergänzen.
+        </p>
+        <select name="reminder_minutes">
+          <?php foreach ($reminderMinuteOptions as $value => $label): ?>
+            <option value="<?= $value ?>" <?= $reminderDefaultMinutes === $value ? 'selected' : '' ?>><?= $label ?></option>
+          <?php endforeach; ?>
+        </select>
+      <?php endif; ?>
+
       <label>Ort</label>
       <input type="text" name="location" value="<?= h($locationValue) ?>" />
 
@@ -248,7 +274,7 @@ $isSeriesInstance = $event && !empty($event['recurrence_parent_id']);
         <label>Erinnerung hinzufügen</label>
         <div class="row">
           <select name="remind_before_minutes">
-            <?php foreach ([15 => '15 Minuten vorher', 30 => '30 Minuten vorher', 60 => '1 Stunde vorher', 120 => '2 Stunden vorher', 1440 => '1 Tag vorher', 2880 => '2 Tage vorher'] as $value => $label): ?>
+            <?php foreach ($reminderMinuteOptions as $value => $label): ?>
               <option value="<?= $value ?>" <?= $reminderDefaultMinutes === $value ? 'selected' : '' ?>><?= $label ?></option>
             <?php endforeach; ?>
           </select>

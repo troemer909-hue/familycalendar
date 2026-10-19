@@ -111,6 +111,76 @@ final class EventCrudTest extends TestCase
         self::assertCount(4, $list['data']);
     }
 
+    public function testEventCreationAddsReminderForCreatorByDefault(): void
+    {
+        $client = $this->loggedInClient();
+
+        $create = $client->request('POST', '/api/events', [
+            'title' => 'Zahnarzt',
+            'starts_at' => '2026-03-10 14:00:00', 'ends_at' => '2026-03-10 15:00:00',
+            'scope' => 'family',
+        ]);
+        self::assertTrue($create['ok']);
+
+        $reminders = $client->request('GET', "/api/events/{$create['data']['id']}/reminders");
+        self::assertTrue($reminders['ok']);
+        self::assertCount(1, $reminders['data'], 'Ohne explizites add_reminder=false soll standardmäßig eine Erinnerung angelegt werden.');
+        self::assertSame(30, $reminders['data'][0]['remind_before_minutes']);
+    }
+
+    public function testEventCreationWithoutReminderCreatesNone(): void
+    {
+        $client = $this->loggedInClient();
+
+        $create = $client->request('POST', '/api/events', [
+            'title' => 'Zahnarzt',
+            'starts_at' => '2026-03-10 14:00:00', 'ends_at' => '2026-03-10 15:00:00',
+            'scope' => 'family',
+            'add_reminder' => false,
+        ]);
+        self::assertTrue($create['ok']);
+
+        $reminders = $client->request('GET', "/api/events/{$create['data']['id']}/reminders");
+        self::assertCount(0, $reminders['data'], 'add_reminder=false darf keine Erinnerung anlegen.');
+    }
+
+    public function testEventCreationHonorsCustomReminderMinutes(): void
+    {
+        $client = $this->loggedInClient();
+
+        $create = $client->request('POST', '/api/events', [
+            'title' => 'Zahnarzt',
+            'starts_at' => '2026-03-10 14:00:00', 'ends_at' => '2026-03-10 15:00:00',
+            'scope' => 'family',
+            'reminder_minutes' => 120,
+        ]);
+        self::assertTrue($create['ok']);
+
+        $reminders = $client->request('GET', "/api/events/{$create['data']['id']}/reminders");
+        self::assertSame(120, $reminders['data'][0]['remind_before_minutes']);
+    }
+
+    public function testRecurringEventAddsReminderToEveryOccurrence(): void
+    {
+        $client = $this->loggedInClient();
+
+        $create = $client->request('POST', '/api/events', [
+            'title' => 'Training',
+            'starts_at' => '2026-01-05 18:00:00', 'ends_at' => '2026-01-05 19:00:00',
+            'scope' => 'family',
+            'recurrence_rule' => 'FREQ=WEEKLY;COUNT=3',
+        ]);
+        self::assertTrue($create['ok']);
+
+        $list = $client->request('GET', '/api/events?from=2026-01-01&to=2026-01-31');
+        self::assertCount(3, $list['data']);
+
+        foreach ($list['data'] as $occurrence) {
+            $reminders = $client->request('GET', "/api/events/{$occurrence['id']}/reminders");
+            self::assertCount(1, $reminders['data'], 'Jede einzelne Instanz der Serie soll ihre eigene Erinnerung bekommen.');
+        }
+    }
+
     public function testEventsAreScopedToOwnFamilyOnly(): void
     {
         $familyA = $this->loggedInClient();
