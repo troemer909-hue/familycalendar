@@ -33,10 +33,12 @@ if ($repeatFreq !== 'none' && isset($freqMap[$repeatFreq])) {
 $res = $client->request('POST', "/api/task-lists/{$listId}/tasks", $payload);
 handleUnauthorized($res);
 
+$fromForm = $_POST['redirect'] ?? null;
+
 if (!$res['ok']) {
-    header('Location: task_list_view.php?id=' . $listId . '&error=' . urlencode($res['data']['error'] ?? 'Aufgabe konnte nicht hinzugefügt werden.'));
+    header('Location: ' . taskListRedirectUrl($listId, $fromForm, $res['data']['error'] ?? 'Aufgabe konnte nicht hinzugefügt werden.'));
     exit;
 }
 
-header('Location: task_list_view.php?id=' . $listId);
+header('Location: ' . taskListRedirectUrl($listId, $fromForm));
 exit;
