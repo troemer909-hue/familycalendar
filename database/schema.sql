@@ -341,7 +341,8 @@ INSERT IGNORE INTO schema_migrations (migration) VALUES
   ('014_task_lists.sql'),
   ('015_task_list_assignment.sql'),
   ('016_calendar_source_reminders.sql'),
-  ('017_calendar_source_color.sql');
+  ('017_calendar_source_color.sql'),
+  ('018_calendar_source_color_backfill.sql');
 
 CREATE TABLE IF NOT EXISTS self_update_runs (
   id INT PRIMARY KEY AUTO_INCREMENT,
