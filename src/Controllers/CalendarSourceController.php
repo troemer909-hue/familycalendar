@@ -22,13 +22,25 @@ use PDO;
 final class CalendarSourceController
 {
     /**
+     * Feste Palette für automatisch vergebene Quellen-Farben (siehe
+     * calendar_sources.color) - bewusst nicht die Mitglieder-Farben
+     * wiederverwendet, damit Termine aus Quellen auf den ersten Blick von
+     * "normalen" Terminen unterscheidbar bleiben. Wird reihum vergeben,
+     * siehe nextPaletteColor().
+     */
+    private const COLOR_PALETTE = [
+        '#f97316', '#0ea5e9', '#a855f7', '#22c55e',
+        '#ec4899', '#eab308', '#14b8a6', '#6366f1',
+    ];
+
+    /**
      * GET /api/calendar-sources
      */
     public function index(Request $request): void
     {
         $db = Database::connection();
         $stmt = $db->prepare(
-            'SELECT id, name, type, source_url, sync_interval_minutes, default_reminder_minutes, last_synced_at, status, family_member_id
+            'SELECT id, name, type, source_url, sync_interval_minutes, default_reminder_minutes, color, last_synced_at, status, family_member_id
              FROM calendar_sources
              WHERE family_id = :family_id
              ORDER BY created_at DESC'
@@ -198,9 +210,9 @@ final class CalendarSourceController
 
         $db->prepare(
             'INSERT INTO calendar_sources
-                (family_id, family_member_id, name, type, source_url, sync_interval_minutes, default_reminder_minutes, status)
+                (family_id, family_member_id, name, type, source_url, sync_interval_minutes, default_reminder_minutes, color, status)
              VALUES
-                (:family_id, :family_member_id, :name, :type, :source_url, :interval, :reminder_minutes, "active")'
+                (:family_id, :family_member_id, :name, :type, :source_url, :interval, :reminder_minutes, :color, "active")'
         )->execute([
             'family_id' => TenantContext::familyId(),
             'family_member_id' => $memberId,
@@ -209,9 +221,26 @@ final class CalendarSourceController
             'source_url' => $url,
             'interval' => $interval,
             'reminder_minutes' => $reminderMinutes,
+            'color' => $this->nextPaletteColor($db),
         ]);
 
         return (int) $db->lastInsertId();
+    }
+
+    /**
+     * Vergibt die nächste noch nicht genutzte Farbe aus COLOR_PALETTE an
+     * eine neue Quelle der Familie, reihum (Quelle Nr. 9 bekommt wieder die
+     * erste Farbe). So bleiben Termine aus verschiedenen abonnierten/
+     * importierten Kalendern farblich unterscheidbar - unabhängig davon,
+     * welcher Person sie zugeordnet sind.
+     */
+    private function nextPaletteColor(PDO $db): string
+    {
+        $stmt = $db->prepare('SELECT COUNT(*) FROM calendar_sources WHERE family_id = :family_id');
+        $stmt->execute(['family_id' => TenantContext::familyId()]);
+        $existingCount = (int) $stmt->fetchColumn();
+
+        return self::COLOR_PALETTE[$existingCount % count(self::COLOR_PALETTE)];
     }
 
     private function assertOwnMember(PDO $db, int $memberId): int

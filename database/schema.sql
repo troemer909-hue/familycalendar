@@ -89,6 +89,11 @@ CREATE TABLE IF NOT EXISTS calendar_sources (
   -- Vorlaufzeit (siehe CalendarSourceController/CalendarSync). NULL =
   -- keine automatischen Erinnerungen für diese Quelle.
   default_reminder_minutes INT NULL,
+  -- Feste Farbe (Hex) für alle Termine dieser Quelle, unabhängig davon,
+  -- welcher Person sie zugeordnet sind - überschreibt die Mitglieder-Farbe
+  -- in eventColor()/Helpers.php. Wird beim Anlegen automatisch aus einer
+  -- festen Palette vergeben (siehe CalendarSourceController::nextPaletteColor()).
+  color VARCHAR(7) NULL,
   last_synced_at DATETIME NULL,
   status ENUM('active','error','paused') NOT NULL DEFAULT 'active',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -335,7 +340,8 @@ INSERT IGNORE INTO schema_migrations (migration) VALUES
   ('013_categories.sql'),
   ('014_task_lists.sql'),
   ('015_task_list_assignment.sql'),
-  ('016_calendar_source_reminders.sql');
+  ('016_calendar_source_reminders.sql'),
+  ('017_calendar_source_color.sql');
 
 CREATE TABLE IF NOT EXISTS self_update_runs (
   id INT PRIMARY KEY AUTO_INCREMENT,
