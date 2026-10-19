@@ -49,6 +49,44 @@ final class TaskListController
     }
 
     /**
+     * GET /api/tasks/due?from=YYYY-MM-DD&to=YYYY-MM-DD
+     * Offene (nicht erledigte) Aufgaben mit Fälligkeitsdatum im Zeitraum,
+     * familienweit über alle Listen hinweg - für die Tagesmarkierungen im
+     * Kalender (siehe calendar.php, Phase 4 im Konzept). Bewusst nur
+     * offene Aufgaben: erledigte sollen den Kalender nicht zumüllen.
+     */
+    public function dueTasks(Request $request): void
+    {
+        $from = (string) ($request->query['from'] ?? '');
+        $to = (string) ($request->query['to'] ?? '');
+
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $from) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $to)) {
+            Response::error('from und to sind erforderlich (Format YYYY-MM-DD).', 422);
+        }
+
+        $db = Database::connection();
+        $stmt = $db->prepare(
+            'SELECT t.id, t.title, t.due_date, t.task_list_id, tl.name AS task_list_name
+             FROM tasks t
+             JOIN task_lists tl ON tl.id = t.task_list_id
+             WHERE tl.family_id = :family_id AND t.is_done = 0
+                   AND t.due_date BETWEEN :from AND :to
+             ORDER BY t.due_date ASC'
+        );
+        $stmt->execute(['family_id' => TenantContext::familyId(), 'from' => $from, 'to' => $to]);
+
+        $tasks = array_map(static fn (array $row): array => [
+            'id' => (int) $row['id'],
+            'title' => $row['title'],
+            'due_date' => $row['due_date'],
+            'task_list_id' => (int) $row['task_list_id'],
+            'task_list_name' => $row['task_list_name'],
+        ], $stmt->fetchAll());
+
+        Response::json($tasks);
+    }
+
+    /**
      * POST /api/task-lists
      * Body: { name }
      */

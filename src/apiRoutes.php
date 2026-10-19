@@ -73,6 +73,7 @@ function buildApiRouter(): Router
     // -- Aufgabenlisten (geschützt, kein Plan-Gating - siehe TaskListController) --
     $taskLists = new TaskListController();
     $router->get('/api/task-lists', [$taskLists, 'index'], [$authMiddleware]);
+    $router->get('/api/tasks/due', [$taskLists, 'dueTasks'], [$authMiddleware]);
     $router->post('/api/task-lists', [$taskLists, 'create'], [$authMiddleware]);
     $router->delete('/api/task-lists/{id}', [$taskLists, 'destroy'], [$authMiddleware]);
     $router->get('/api/task-lists/{id}/tasks', [$taskLists, 'tasks'], [$authMiddleware]);
