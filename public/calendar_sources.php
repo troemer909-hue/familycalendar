@@ -56,6 +56,9 @@ $reminderMinuteOptions = reminderMinuteOptions();
         <?php foreach ($sources as $s): ?>
           <div class="member-row" style="align-items:flex-start;flex-wrap:wrap;">
             <div style="flex:1;min-width:200px;">
+              <?php if (!empty($s['color'])): ?>
+                <span title="Farbe der Termine aus dieser Quelle" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:<?= h($s['color']) ?>;margin-right:6px;"></span>
+              <?php endif; ?>
               <strong><?= h($s['name']) ?></strong><br />
               <span class="hint-text">
                 <?= h($typeLabels[$s['type']] ?? $s['type']) ?>

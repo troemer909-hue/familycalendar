@@ -205,9 +205,18 @@ function reminderMinuteOptions(): array
     ];
 }
 
-/** Farbe für einen Termin-Chip: Familientermine grau, sonst Farbe des ersten Teilnehmers. */
+/**
+ * Farbe für einen Termin-Chip: Termine aus einer importierten/abonnierten
+ * Kalenderquelle bekommen immer deren feste Quellen-Farbe (unabhängig
+ * davon, welcher Person sie zugeordnet sind - siehe calendar_sources.color/
+ * CalendarSourceController::nextPaletteColor()). Sonst: Familientermine
+ * grau, ansonsten Farbe des ersten Teilnehmers.
+ */
 function eventColor(array $event, array $membersById): string
 {
+    if (!empty($event['source_color'])) {
+        return $event['source_color'];
+    }
     if ($event['scope'] === 'family') {
         return '#64748b';
     }

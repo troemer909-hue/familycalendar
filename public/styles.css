@@ -637,4 +637,19 @@ button, .btn {
 
   .install-banner { flex-wrap: wrap; row-gap: 8px; }
   .install-banner-text { flex-basis: 100%; }
+
+  /* Sehr schmale/gefaltete Bildschirme (z.B. Cover-Display von
+     Falt-Handys): Wochentags-Kopf und Ganztägig-Zeile explizit vor
+     Umbruch schützen (flex-wrap:nowrap) und zusätzlich verkleinern,
+     damit 7 Spalten + Zeitachsen-Spalte zuverlässig nebeneinander
+     passen statt - je nach Gerät/Zoom - umzubrechen. */
+  .week-grid-header,
+  .week-grid-allday { flex-wrap: nowrap; }
+  .week-grid-time-gutter { flex: 0 0 24px; }
+  .week-grid-hours { flex: 0 0 24px; }
+  .week-grid-daylabel { padding: 4px 0; }
+  .week-grid-daylabel .weekday-label { font-size: 8px; }
+  .week-grid-daylabel .day-number { font-size: 12px; min-width: 20px; height: 20px; }
+  .week-grid-allday-cell { padding: 1px; }
+  .week-grid-allday-cell .event-chip { font-size: 8px; padding: 1px 3px; }
 }

@@ -27,10 +27,11 @@ final class EventController
         $stmt = $db->prepare(
             'SELECT e.id, e.title, e.description, e.location, e.starts_at, e.ends_at,
                     e.all_day, e.scope, e.recurrence_rule, e.recurrence_parent_id, e.category, e.source,
-                    e.created_by,
+                    e.created_by, e.calendar_source_id, cs.color AS source_color,
                     GROUP_CONCAT(ep.family_member_id) AS participant_ids
              FROM events e
              LEFT JOIN event_participants ep ON ep.event_id = e.id
+             LEFT JOIN calendar_sources cs ON cs.id = e.calendar_source_id
              WHERE e.family_id = :family_id
                AND e.starts_at < :to
                AND e.ends_at >= :from
@@ -209,9 +210,11 @@ final class EventController
         $stmt = $db->prepare(
             'SELECT e.id, e.title, e.description, e.location, e.starts_at, e.ends_at,
                     e.all_day, e.scope, e.recurrence_rule, e.recurrence_parent_id, e.category, e.source, e.created_by,
+                    e.calendar_source_id, cs.color AS source_color,
                     GROUP_CONCAT(ep.family_member_id) AS participant_ids
              FROM events e
              LEFT JOIN event_participants ep ON ep.event_id = e.id
+             LEFT JOIN calendar_sources cs ON cs.id = e.calendar_source_id
              WHERE e.id = :id AND e.family_id = :family_id
              GROUP BY e.id'
         );
