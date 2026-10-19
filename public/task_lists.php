@@ -8,6 +8,10 @@ $listsRes = $client->request('GET', '/api/task-lists');
 handleUnauthorized($listsRes);
 $lists = $listsRes['ok'] ? $listsRes['data'] : [];
 
+$membersRes = $client->request('GET', '/api/members');
+handleUnauthorized($membersRes);
+$members = $membersRes['ok'] ? $membersRes['data'] : [];
+
 $error = $_GET['error'] ?? null;
 $notice = $_GET['notice'] ?? null;
 ?>
@@ -38,7 +42,12 @@ $notice = $_GET['notice'] ?? null;
       <div class="members-list">
         <?php foreach ($lists as $l): ?>
           <a href="task_list_view.php?id=<?= (int) $l['id'] ?>" class="member-row" style="text-decoration:none;color:inherit;">
-            <span class="name"><strong><?= h($l['name']) ?></strong></span>
+            <span class="name">
+              <strong><?= h($l['name']) ?></strong>
+              <?php if ($l['assigned_member_name']): ?>
+                <span class="badge profile">Für <?= h($l['assigned_member_name']) ?></span>
+              <?php endif; ?>
+            </span>
             <span class="hint-text">
               <?= (int) $l['open_count'] ?> offen · <?= (int) $l['total_count'] ?> gesamt
             </span>
@@ -52,6 +61,18 @@ $notice = $_GET['notice'] ?? null;
       <?= csrfField() ?>
       <label>Name der Liste</label>
       <input type="text" name="name" placeholder="z.B. Einkaufsliste" required />
+      <label>Für eine bestimmte Person (optional)</label>
+      <select name="assigned_member_id">
+        <option value="">Niemand bestimmtes (für alle)</option>
+        <?php foreach ($members as $m): ?>
+          <option value="<?= (int) $m['id'] ?>"><?= h($m['display_name']) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <p class="hint-text">
+        Die Liste bleibt für die ganze Familie sichtbar - die zugewiesene
+        Person bekommt zusätzlich eine Push-Benachrichtigung (falls sie ein
+        eigenes Login mit aktivierten Push-Benachrichtigungen hat).
+      </p>
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">Liste anlegen</button>
         <div class="spacer"></div>

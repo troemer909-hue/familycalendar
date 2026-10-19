@@ -46,6 +46,9 @@ $error = $_GET['error'] ?? null;
 <?= appChromeOpen('tasks') ?>
   <div class="form-card" style="max-width:640px;">
     <h1><?= h($list['name']) ?></h1>
+    <?php if ($list['assigned_member_name']): ?>
+      <p><span class="badge profile">Für <?= h($list['assigned_member_name']) ?></span></p>
+    <?php endif; ?>
     <p><a href="task_lists.php" class="hint-text">&larr; Alle Listen</a></p>
 
     <?php if ($error): ?><p class="error-box"><?= h($error) ?></p><?php endif; ?>

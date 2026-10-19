@@ -174,9 +174,15 @@ CREATE TABLE IF NOT EXISTS task_lists (
   id INT PRIMARY KEY AUTO_INCREMENT,
   family_id INT NOT NULL,
   name VARCHAR(120) NOT NULL,
+  -- Optional: "diese Liste ist für Kind X" - löst beim Anlegen/Ändern eine
+  -- Push-Benachrichtigung an diese Person aus (siehe TaskListController).
+  -- KEINE Zugriffsbeschränkung, die Liste bleibt für die ganze Familie
+  -- sichtbar/bearbeitbar wie jede andere.
+  assigned_member_id INT NULL,
   created_by INT NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE CASCADE,
+  FOREIGN KEY (assigned_member_id) REFERENCES family_members(id) ON DELETE SET NULL,
   FOREIGN KEY (created_by) REFERENCES family_members(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -322,7 +328,8 @@ INSERT IGNORE INTO schema_migrations (migration) VALUES
   ('011_self_update.sql'),
   ('012_shorten_indexed_varchars.sql'),
   ('013_categories.sql'),
-  ('014_task_lists.sql');
+  ('014_task_lists.sql'),
+  ('015_task_list_assignment.sql');
 
 CREATE TABLE IF NOT EXISTS self_update_runs (
   id INT PRIMARY KEY AUTO_INCREMENT,
