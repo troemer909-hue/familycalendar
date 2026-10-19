@@ -99,6 +99,7 @@ function buildApiRouter(): Router
     $router->post('/api/calendar-sources/import-csv', [$calendarSources, 'importCsv'], [$authMiddleware]);
     $router->post('/api/calendar-sources/stream', [$calendarSources, 'createStream'], [$authMiddleware]);
     $router->post('/api/calendar-sources/{id}/sync', [$calendarSources, 'sync'], [$authMiddleware]);
+    $router->put('/api/calendar-sources/{id}', [$calendarSources, 'update'], [$authMiddleware]);
     $router->delete('/api/calendar-sources/{id}', [$calendarSources, 'destroy'], [$authMiddleware]);
 
     // -- Outbound-ICS-Export --------------------------------------------------

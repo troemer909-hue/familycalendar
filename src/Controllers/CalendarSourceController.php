@@ -176,6 +176,59 @@ final class CalendarSourceController
     }
 
     /**
+     * PUT /api/calendar-sources/{id}
+     * Body: { reminder_minutes?, color? }
+     * Nachträgliches Ändern der Erinnerung und/oder Farbe einer bereits
+     * bestehenden Quelle - beides wurde bisher nur einmalig beim Anlegen
+     * gesetzt (reminder_minutes) bzw. automatisch vergeben (color) und war
+     * danach nicht mehr änderbar. Beide Felder sind optional, nur die
+     * übergebenen werden aktualisiert; reminder_minutes = "" entfernt die
+     * automatische Erinnerung wieder (wie beim Anlegen). Schon
+     * eingetragene reminders/Termin-Farben bleiben unverändert - die neue
+     * Erinnerungs-Einstellung gilt erst ab dem nächsten Import/Sync, die
+     * Farbe wirkt dagegen sofort (wird live über den JOIN in
+     * EventController gelesen, siehe eventColor() in Helpers.php).
+     */
+    public function update(Request $request): void
+    {
+        TenantContext::requireAdmin();
+        $id = (int) $request->params['id'];
+
+        $db = Database::connection();
+        $stmt = $db->prepare('SELECT id FROM calendar_sources WHERE id = :id AND family_id = :family_id');
+        $stmt->execute(['id' => $id, 'family_id' => TenantContext::familyId()]);
+        if (!$stmt->fetch()) {
+            Response::error('Kalenderquelle nicht gefunden.', 404);
+        }
+
+        $fields = [];
+        $params = ['id' => $id];
+
+        if (array_key_exists('reminder_minutes', $request->body)) {
+            $fields[] = 'default_reminder_minutes = :reminder_minutes';
+            $params['reminder_minutes'] = $this->sanitizeReminderMinutes($request->input('reminder_minutes'));
+        }
+
+        if (array_key_exists('color', $request->body)) {
+            $color = (string) $request->input('color');
+            if (!in_array($color, self::COLOR_PALETTE, true)) {
+                Response::error('color muss eine der vorgegebenen Paletten-Farben sein.', 422);
+            }
+            $fields[] = 'color = :color';
+            $params['color'] = $color;
+        }
+
+        if (empty($fields)) {
+            Response::error('Nichts zu ändern übergeben (reminder_minutes und/oder color erwartet).', 422);
+        }
+
+        $db->prepare('UPDATE calendar_sources SET ' . implode(', ', $fields) . ' WHERE id = :id')
+            ->execute($params);
+
+        Response::json(['status' => 'updated']);
+    }
+
+    /**
      * DELETE /api/calendar-sources/{id}
      * Bereits importierte/synchronisierte Termine bleiben erhalten - nur
      * die Quelle selbst wird entfernt (calendar_source_id wird per FK auf

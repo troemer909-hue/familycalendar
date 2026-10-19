@@ -26,6 +26,10 @@ $statusLabels = [
     'paused' => 'Pausiert',
 ];
 $reminderMinuteOptions = reminderMinuteOptions();
+// Muss mit CalendarSourceController::COLOR_PALETTE übereinstimmen - dort
+// ist es die Quelle der Wahrheit (Validierung beim Speichern), hier nur
+// zur Anzeige der Auswahlmöglichkeiten.
+$colorPalette = ['#f97316', '#0ea5e9', '#a855f7', '#22c55e', '#ec4899', '#eab308', '#14b8a6', '#6366f1'];
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -88,6 +92,32 @@ $reminderMinuteOptions = reminderMinuteOptions();
                 <button type="submit" class="btn btn-danger">Entfernen</button>
               </form>
             </div>
+            <details style="width:100%;margin-top:6px;">
+              <summary class="btn btn-secondary" style="display:inline-block;cursor:pointer;">Erinnerung/Farbe ändern</summary>
+              <form method="post" action="calendar_source_update.php" style="margin:10px 0 0;">
+                <?= csrfField() ?>
+                <input type="hidden" name="id" value="<?= (int) $s['id'] ?>" />
+                <label>Erinnerung für Termine aus dieser Quelle</label>
+                <select name="reminder_minutes">
+                  <option value="">Keine automatische Erinnerung</option>
+                  <?php foreach ($reminderMinuteOptions as $value => $label): ?>
+                    <option value="<?= $value ?>"<?= (int) ($s['default_reminder_minutes'] ?? 0) === $value ? ' selected' : '' ?>><?= h($label) ?></option>
+                  <?php endforeach; ?>
+                </select>
+                <p class="hint-text">Gilt erst für künftige Importe/Synchronisierungen, nicht rückwirkend für bereits angelegte Termine.</p>
+                <label>Farbe der Termine aus dieser Quelle</label>
+                <div class="color-swatch-row">
+                  <?php foreach ($colorPalette as $i => $c): ?>
+                    <input type="radio" name="color" value="<?= h($c) ?>" id="source-<?= (int) $s['id'] ?>-color-<?= $i ?>"<?= $s['color'] === $c ? ' checked' : '' ?> />
+                    <label for="source-<?= (int) $s['id'] ?>-color-<?= $i ?>" style="background:<?= h($c) ?>;"></label>
+                  <?php endforeach; ?>
+                </div>
+                <p class="hint-text">Wirkt sofort auf alle bisherigen und künftigen Termine dieser Quelle.</p>
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+              </form>
+            </details>
           </div>
         <?php endforeach; ?>
       </div>
