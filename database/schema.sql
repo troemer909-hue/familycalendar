@@ -214,6 +214,27 @@ CREATE TABLE IF NOT EXISTS tasks (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------
+-- Vorrat-Tracker / "Wird knapp"-Liste
+--
+-- Steht VOR der Einkaufsliste, weil shopping_list_items.
+-- source_stock_item_id unten per Fremdschlüssel hierauf verweist -
+-- Reihenfolge ist für CREATE TABLE (anders als für ALTER TABLE)
+-- zwingend, es sei denn man schaltet foreign_key_checks aus.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS household_stock_items (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  family_id INT NOT NULL,
+  label VARCHAR(255) NOT NULL,
+  low_stock TINYINT(1) NOT NULL DEFAULT 0,
+  flagged_by INT NULL,
+  flagged_at DATETIME NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE CASCADE,
+  FOREIGN KEY (flagged_by) REFERENCES family_members(id) ON DELETE SET NULL,
+  UNIQUE KEY uniq_family_label (family_id, label)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------
 -- Gemeinsame Einkaufsliste
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS shopping_list_items (
@@ -221,6 +242,12 @@ CREATE TABLE IF NOT EXISTS shopping_list_items (
   family_id INT NOT NULL,
   added_by INT NULL,
   label VARCHAR(255) NOT NULL,
+  -- Gesetzt, wenn dieser Eintrag automatisch durch "wird knapp" in der
+  -- Vorratsliste erzeugt wurde (siehe household_stock_items oben /
+  -- HouseholdStockController::flagLow()) - beim Abhaken wird darüber
+  -- low_stock dort automatisch zurückgesetzt (siehe
+  -- ShoppingListController::update()).
+  source_stock_item_id INT NULL,
   checked TINYINT(1) NOT NULL DEFAULT 0,
   checked_by INT NULL,
   checked_at DATETIME NULL,
@@ -228,6 +255,7 @@ CREATE TABLE IF NOT EXISTS shopping_list_items (
   FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE CASCADE,
   FOREIGN KEY (added_by) REFERENCES family_members(id) ON DELETE SET NULL,
   FOREIGN KEY (checked_by) REFERENCES family_members(id) ON DELETE SET NULL,
+  FOREIGN KEY (source_stock_item_id) REFERENCES household_stock_items(id) ON DELETE SET NULL,
   INDEX idx_family_checked (family_id, checked)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -361,7 +389,8 @@ INSERT IGNORE INTO schema_migrations (migration) VALUES
   ('016_calendar_source_reminders.sql'),
   ('017_calendar_source_color.sql'),
   ('018_calendar_source_color_backfill.sql'),
-  ('019_shopping_list.sql');
+  ('019_shopping_list.sql'),
+  ('020_household_stock.sql');
 
 CREATE TABLE IF NOT EXISTS self_update_runs (
   id INT PRIMARY KEY AUTO_INCREMENT,
