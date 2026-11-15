@@ -14,6 +14,7 @@ use Familienkalender\Controllers\NotificationPreferenceController;
 use Familienkalender\Controllers\PushSubscriptionController;
 use Familienkalender\Controllers\ReminderController;
 use Familienkalender\Controllers\SelfUpdateController;
+use Familienkalender\Controllers\ShoppingListController;
 use Familienkalender\Controllers\TaskListController;
 use Familienkalender\Core\Response;
 use Familienkalender\Core\Router;
@@ -80,6 +81,14 @@ function buildApiRouter(): Router
     $router->post('/api/task-lists/{id}/tasks', [$taskLists, 'createTask'], [$authMiddleware]);
     $router->put('/api/tasks/{id}', [$taskLists, 'updateTask'], [$authMiddleware]);
     $router->delete('/api/tasks/{id}', [$taskLists, 'deleteTask'], [$authMiddleware]);
+
+    // -- Einkaufsliste (geschützt, kein Plan-Gating, eine Liste pro Familie) --
+    $shoppingList = new ShoppingListController();
+    $router->get('/api/shopping-list', [$shoppingList, 'index'], [$authMiddleware]);
+    $router->post('/api/shopping-list', [$shoppingList, 'create'], [$authMiddleware]);
+    $router->put('/api/shopping-list/{id}', [$shoppingList, 'update'], [$authMiddleware]);
+    $router->delete('/api/shopping-list/{id}', [$shoppingList, 'destroy'], [$authMiddleware]);
+    $router->post('/api/shopping-list/clear-checked', [$shoppingList, 'clearChecked'], [$authMiddleware]);
 
     // -- Push-Benachrichtigungen (geschützt, optional - siehe PushSender) ---
     $push = new PushSubscriptionController();
