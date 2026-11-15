@@ -214,6 +214,24 @@ CREATE TABLE IF NOT EXISTS tasks (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------
+-- Gemeinsame Einkaufsliste
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS shopping_list_items (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  family_id INT NOT NULL,
+  added_by INT NULL,
+  label VARCHAR(255) NOT NULL,
+  checked TINYINT(1) NOT NULL DEFAULT 0,
+  checked_by INT NULL,
+  checked_at DATETIME NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE CASCADE,
+  FOREIGN KEY (added_by) REFERENCES family_members(id) ON DELETE SET NULL,
+  FOREIGN KEY (checked_by) REFERENCES family_members(id) ON DELETE SET NULL,
+  INDEX idx_family_checked (family_id, checked)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------
 -- Erinnerungen (nur für Personen mit Login)
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS reminders (
@@ -342,7 +360,8 @@ INSERT IGNORE INTO schema_migrations (migration) VALUES
   ('015_task_list_assignment.sql'),
   ('016_calendar_source_reminders.sql'),
   ('017_calendar_source_color.sql'),
-  ('018_calendar_source_color_backfill.sql');
+  ('018_calendar_source_color_backfill.sql'),
+  ('019_shopping_list.sql');
 
 CREATE TABLE IF NOT EXISTS self_update_runs (
   id INT PRIMARY KEY AUTO_INCREMENT,
