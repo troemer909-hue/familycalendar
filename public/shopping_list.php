@@ -106,6 +106,7 @@ $notice = $_GET['notice'] ?? null;
     <?php endif; ?>
 
     <div class="form-actions" style="margin-top:28px;">
+      <a href="household_stock.php" class="btn btn-secondary">Vorratsliste verwalten</a>
       <a href="calendar.php" class="btn btn-secondary">Zurück zum Kalender</a>
     </div>
   </div>

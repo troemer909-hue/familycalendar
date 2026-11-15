@@ -13,6 +13,7 @@ use Familienkalender\Controllers\MemberController;
 use Familienkalender\Controllers\NotificationPreferenceController;
 use Familienkalender\Controllers\PushSubscriptionController;
 use Familienkalender\Controllers\ReminderController;
+use Familienkalender\Controllers\HouseholdStockController;
 use Familienkalender\Controllers\SelfUpdateController;
 use Familienkalender\Controllers\ShoppingListController;
 use Familienkalender\Controllers\TaskListController;
@@ -89,6 +90,13 @@ function buildApiRouter(): Router
     $router->put('/api/shopping-list/{id}', [$shoppingList, 'update'], [$authMiddleware]);
     $router->delete('/api/shopping-list/{id}', [$shoppingList, 'destroy'], [$authMiddleware]);
     $router->post('/api/shopping-list/clear-checked', [$shoppingList, 'clearChecked'], [$authMiddleware]);
+
+    // -- Vorrat-Tracker (geschützt, schreibt in die Einkaufsliste oben) --
+    $householdStock = new HouseholdStockController();
+    $router->get('/api/household-stock', [$householdStock, 'index'], [$authMiddleware]);
+    $router->post('/api/household-stock', [$householdStock, 'create'], [$authMiddleware]);
+    $router->post('/api/household-stock/{id}/flag-low', [$householdStock, 'flagLow'], [$authMiddleware]);
+    $router->delete('/api/household-stock/{id}', [$householdStock, 'destroy'], [$authMiddleware]);
 
     // -- Push-Benachrichtigungen (geschützt, optional - siehe PushSender) ---
     $push = new PushSubscriptionController();

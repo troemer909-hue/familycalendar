@@ -88,7 +88,7 @@ final class ShoppingListController
     {
         $db = Database::connection();
         $id = (int) $request->params['id'];
-        $this->findOwnItem($db, $id);
+        $item = $this->findOwnItem($db, $id);
 
         $checked = (bool) $request->input('checked', false);
 
@@ -102,6 +102,16 @@ final class ShoppingListController
             'checked_at' => $checked ? date('Y-m-d H:i:s') : null,
             'id' => $id,
         ]);
+
+        // Wurde dieser Artikel automatisch aus der Vorratsliste erzeugt
+        // (siehe HouseholdStockController::flagLow()), setzt das Abhaken
+        // "wird knapp" dort wieder zurück - der Artikel bleibt dauerhaft
+        // in der Vorratsliste und kann beim nächsten Mal erneut gemeldet
+        // werden (siehe docs/feature-ideas/vorrat-nachbestellen.md).
+        if ($checked && $item['source_stock_item_id'] !== null) {
+            $db->prepare('UPDATE household_stock_items SET low_stock = 0 WHERE id = :id')
+                ->execute(['id' => $item['source_stock_item_id']]);
+        }
 
         Response::json(['id' => $id, 'checked' => $checked]);
     }
@@ -134,12 +144,18 @@ final class ShoppingListController
         Response::json(['status' => 'cleared', 'removed' => $stmt->rowCount()]);
     }
 
-    private function findOwnItem(\PDO $db, int $id): void
+    /** @return array{id:int,source_stock_item_id:?int} */
+    private function findOwnItem(\PDO $db, int $id): array
     {
-        $stmt = $db->prepare('SELECT id FROM shopping_list_items WHERE id = :id AND family_id = :family_id');
+        $stmt = $db->prepare(
+            'SELECT id, source_stock_item_id FROM shopping_list_items WHERE id = :id AND family_id = :family_id'
+        );
         $stmt->execute(['id' => $id, 'family_id' => TenantContext::familyId()]);
-        if (!$stmt->fetch()) {
+        $item = $stmt->fetch();
+        if (!$item) {
             Response::error('Artikel nicht gefunden.', 404);
         }
+
+        return $item;
     }
 }
