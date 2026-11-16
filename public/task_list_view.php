@@ -32,6 +32,8 @@ $membersRes = $client->request('GET', '/api/members');
 handleUnauthorized($membersRes);
 $members = $membersRes['ok'] ? $membersRes['data'] : [];
 
+$isAdmin = isset($_SESSION['fk_role']) && $_SESSION['fk_role'] === 'admin';
+
 $error = $_GET['error'] ?? null;
 ?>
 <!DOCTYPE html>
@@ -60,7 +62,10 @@ $error = $_GET['error'] ?? null;
         <?php foreach ($tasks as $t): ?>
           <div class="member-row" style="align-items:flex-start;flex-wrap:wrap;<?= $t['is_done'] ? 'opacity:.6;' : '' ?>">
             <div style="flex:1;min-width:180px;">
-              <span style="<?= $t['is_done'] ? 'text-decoration:line-through;' : '' ?>"><?= h($t['title']) ?></span><br />
+              <span style="<?= $t['is_done'] ? 'text-decoration:line-through;' : '' ?>"><?= h($t['title']) ?></span>
+              <?php if ($t['reward_points'] !== null && $t['reward_points'] > 0): ?>
+                <span class="badge" style="margin-left:8px;background:#f59e0b;color:#fff;font-size:12px;">+<?= (int) $t['reward_points'] ?> Punkte</span>
+              <?php endif; ?><br />
               <span class="hint-text">
                 <?php if ($t['assigned_member_name']): ?><?= h($t['assigned_member_name']) ?><?php endif; ?>
                 <?php if ($t['assigned_member_name'] && $t['due_date']): ?> · <?php endif; ?>
@@ -103,6 +108,10 @@ $error = $_GET['error'] ?? null;
           <option value="<?= (int) $m['id'] ?>"><?= h($m['display_name']) ?></option>
         <?php endforeach; ?>
       </select>
+      <?php if ($isAdmin): ?>
+      <label>Punkte (optional, nur für Admins)</label>
+      <input type="number" name="reward_points" min="0" max="999" placeholder="z.B. 10" />
+      <?php endif; ?>
       <label>Fällig am (optional, Pflicht bei Wiederholung)</label>
       <input type="date" name="due_date" />
       <label>Wiederholung (optional)</label>
