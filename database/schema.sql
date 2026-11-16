@@ -206,11 +206,35 @@ CREATE TABLE IF NOT EXISTS tasks (
   done_at DATETIME NULL,
   done_by INT NULL,
   sort_order INT NOT NULL DEFAULT 0,
+  -- Belohnungssystem / Taschengeld (siehe member_points_ledger unten) -
+  -- Punktwert, der bei Abschluss der Aufgabe dem in done_by gespeicherten
+  -- Mitglied gutgeschrieben wird. NULL = keine Punkte für diese Aufgabe.
+  reward_points INT NULL DEFAULT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (task_list_id) REFERENCES task_lists(id) ON DELETE CASCADE,
   FOREIGN KEY (assigned_member_id) REFERENCES family_members(id) ON DELETE SET NULL,
   FOREIGN KEY (done_by) REFERENCES family_members(id) ON DELETE SET NULL,
   INDEX idx_task_list_done (task_list_id, is_done)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------
+-- Belohnungssystem / Taschengeld ("member points") - Ledger statt
+-- einzelnem Saldo-Feld: der Punktestand ist SUM(points) je Mitglied,
+-- das vermeidet Inkonsistenzen und liefert automatisch einen Verlauf.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS member_points_ledger (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  family_member_id INT NOT NULL,
+  task_id INT NULL,
+  points INT NOT NULL,
+  reason ENUM('task_completed','task_reverted','manual_adjustment','redemption') NOT NULL,
+  created_by_member_id INT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (family_member_id) REFERENCES family_members(id) ON DELETE CASCADE,
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL,
+  FOREIGN KEY (created_by_member_id) REFERENCES family_members(id) ON DELETE SET NULL,
+  INDEX idx_family_member (family_member_id),
+  INDEX idx_task (task_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------
@@ -390,7 +414,8 @@ INSERT IGNORE INTO schema_migrations (migration) VALUES
   ('017_calendar_source_color.sql'),
   ('018_calendar_source_color_backfill.sql'),
   ('019_shopping_list.sql'),
-  ('020_household_stock.sql');
+  ('020_household_stock.sql'),
+  ('022_member_points_ledger.sql');
 
 CREATE TABLE IF NOT EXISTS self_update_runs (
   id INT PRIMARY KEY AUTO_INCREMENT,

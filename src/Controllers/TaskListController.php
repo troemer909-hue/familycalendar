@@ -159,7 +159,7 @@ final class TaskListController
         $this->findOwnList($db, $listId);
 
         $stmt = $db->prepare(
-            'SELECT t.id, t.title, t.due_date, t.is_done, t.done_at,
+            'SELECT t.id, t.title, t.due_date, t.is_done, t.done_at, t.reward_points,
                     t.assigned_member_id, fm.display_name AS assigned_member_name
              FROM tasks t
              LEFT JOIN family_members fm ON fm.id = t.assigned_member_id
@@ -173,6 +173,7 @@ final class TaskListController
             'title' => $row['title'],
             'due_date' => $row['due_date'],
             'is_done' => (bool) $row['is_done'],
+            'reward_points' => $row['reward_points'] !== null ? (int) $row['reward_points'] : null,
             'assigned_member_id' => $row['assigned_member_id'] !== null ? (int) $row['assigned_member_id'] : null,
             'assigned_member_name' => $row['assigned_member_name'],
         ], $stmt->fetchAll());
@@ -307,18 +308,17 @@ final class TaskListController
         $newDone = (bool) $isDone;
         if ($oldDone !== $newDone) {
             $rewardPoints = $task['reward_points'] ?? null;
-            $completedBy = $task['completed_by_member_id'] ?? $doneBy;
 
-            if ($newDone && $rewardPoints !== null && $rewardPoints > 0 && $completedBy !== null) {
-                MemberPointsController::createLedgerEntry($db, (int) $completedBy, $id, (int) $rewardPoints, 'task_completed');
-            } elseif (!$newDone && $rewardPoints !== null && (int) $rewardPoints > 0) {
-                $originalCompletedBy = $db->prepare('SELECT completed_by_member_id FROM tasks WHERE id = :id')
-                    ->fetchColumn(['id' => $id]);
-                if ($originalCompletedBy !== null && (int) $originalCompletedBy > 0) {
-                    MemberPointsController::createLedgerEntry(
-                        $db, (int) $originalCompletedBy, $id, -(int) $task['reward_points'], 'task_reverted'
-                    );
-                }
+            if ($newDone && $rewardPoints !== null && $rewardPoints > 0 && $doneBy !== null) {
+                MemberPointsController::createLedgerEntry($db, (int) $doneBy, $id, (int) $rewardPoints, 'task_completed');
+            } elseif (!$newDone && $rewardPoints !== null && (int) $rewardPoints > 0 && $task['done_by'] !== null) {
+                // $task['done_by'] ist der VOR diesem Update gelesene Stand -
+                // also noch die Person, die die Aufgabe ursprünglich erledigt
+                // hatte (die lokale $doneBy-Variable ist an dieser Stelle
+                // bereits auf null zurückgesetzt, siehe oben).
+                MemberPointsController::createLedgerEntry(
+                    $db, (int) $task['done_by'], $id, -(int) $rewardPoints, 'task_reverted'
+                );
             }
         }
 
@@ -359,13 +359,13 @@ final class TaskListController
      * immer zu genau einer Liste, deren family_id ist bereits die
      * maßgebliche Quelle.
      *
-     * @return array{id:int,title:string,assigned_member_id:?int,due_date:?string,is_done:int,done_at:?string,done_by:?int}
+     * @return array{id:int,title:string,assigned_member_id:?int,due_date:?string,is_done:int,done_at:?string,done_by:?int,reward_points:?int}
      */
     private function findOwnTask(\PDO $db, int $id): array
     {
         $stmt = $db->prepare(
             'SELECT t.id, t.title, t.assigned_member_id, t.due_date, t.is_done, t.done_at, t.done_by,' . "\n" .
-            '       t.reward_points, t.completed_by_member_id' . "\n" .
+            '       t.reward_points' . "\n" .
             '  FROM tasks t' . "\n" .
             '  JOIN task_lists tl ON tl.id = t.task_list_id' . "\n" .
             ' WHERE t.id = :id AND tl.family_id = :family_id'

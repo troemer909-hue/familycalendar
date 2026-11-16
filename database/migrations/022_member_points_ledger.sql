@@ -1,9 +1,17 @@
 -- ---------------------------------------------------------------------
 -- Belohnungssystem / Taschengeld ("member points")
 -- ---------------------------------------------------------------------
-ALTER TABLE tasks
-  ADD COLUMN reward_points INT NULL DEFAULT NULL AFTER auto_assign,
-  ADD COLUMN completed_by_member_id INT NULL AFTER done_by;
+SET @col_exists := (
+  SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tasks' AND COLUMN_NAME = 'reward_points'
+);
+SET @sql := IF(@col_exists = 0,
+  'ALTER TABLE tasks ADD COLUMN reward_points INT NULL DEFAULT NULL',
+  'DO 0'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 CREATE TABLE IF NOT EXISTS member_points_ledger (
   id INT PRIMARY KEY AUTO_INCREMENT,

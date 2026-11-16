@@ -32,8 +32,6 @@ $membersRes = $client->request('GET', '/api/members');
 handleUnauthorized($membersRes);
 $members = $membersRes['ok'] ? $membersRes['data'] : [];
 
-$isAdmin = isset($_SESSION['fk_role']) && $_SESSION['fk_role'] === 'admin';
-
 $error = $_GET['error'] ?? null;
 ?>
 <!DOCTYPE html>
@@ -108,10 +106,8 @@ $error = $_GET['error'] ?? null;
           <option value="<?= (int) $m['id'] ?>"><?= h($m['display_name']) ?></option>
         <?php endforeach; ?>
       </select>
-      <?php if ($isAdmin): ?>
-      <label>Punkte (optional, nur für Admins)</label>
+      <label>Punkte (optional, Belohnungssystem)</label>
       <input type="number" name="reward_points" min="0" max="999" placeholder="z.B. 10" />
-      <?php endif; ?>
       <label>Fällig am (optional, Pflicht bei Wiederholung)</label>
       <input type="date" name="due_date" />
       <label>Wiederholung (optional)</label>

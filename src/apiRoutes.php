@@ -12,7 +12,6 @@ use Familienkalender\Controllers\IcsExportController;
 use Familienkalender\Controllers\MemberController;
 use Familienkalender\Controllers\NotificationPreferenceController;
 use Familienkalender\Controllers\MemberPointsController;
-use Familienkalender\Controllers\MemberPointsController;
 use Familienkalender\Controllers\PushSubscriptionController;
 use Familienkalender\Controllers\ReminderController;
 use Familienkalender\Controllers\HouseholdStockController;

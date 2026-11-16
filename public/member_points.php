@@ -5,7 +5,6 @@ require_once __DIR__ . '/../src/bootstrap.php';
 requireLogin();
 
 $client = currentApiClient();
-$isAdmin = isset($_SESSION['fk_role']) && $_SESSION['fk_role'] === 'admin';
 
 $pointsRes = $client->request('GET', '/api/member-points');
 handleUnauthorized($pointsRes);
@@ -36,15 +35,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
+// Berechtigung wird serverseitig geprüft (TenantContext::requireAdmin()
+// bzw. assertOwnOrAdminMember() in MemberPointsController) - ein nicht
+// erlaubter Zugriff liefert hier einfach eine leere Liste statt eines
+// Fehlers, konsistent mit dem sonstigen Umgang mit fehlgeschlagenen
+// Requests auf dieser Seite (siehe $balances oben).
 $historyMemberId = isset($_GET['member_id']) ? (int) $_GET['member_id'] : null;
 $history = [];
 if ($historyMemberId > 0) {
-    $allowed = $isAdmin;
-    foreach ($balances as $b) { if ((int)$b['member_id'] === $historyMemberId) { $allowed = true; break; } }
-    if ($allowed) {
-        $histRes = $client->request('GET', "/api/member-points/{$historyMemberId}/history");
-        $history = $histRes['ok'] ? $histRes['data'] : [];
-    }
+    $histRes = $client->request('GET', "/api/member-points/{$historyMemberId}/history");
+    $history = $histRes['ok'] ? $histRes['data'] : [];
 }
 
 $error = $_GET['error'] ?? null;
@@ -83,7 +83,6 @@ $error = $_GET['error'] ?? null;
       </div>
     <?php endif; ?>
 
-    <?php if ($isAdmin): ?>
     <h2 style="font-size:16px;margin-top:28px;">Punkte manuell anpassen</h2>
     <form method="post" action="member_points.php">
       <?= csrfField() ?>
@@ -106,7 +105,6 @@ $error = $_GET['error'] ?? null;
         <button type="submit" class="btn btn-primary">Anpassen</button>
       </div>
     </form>
-    <?php endif; ?>
 
     <?php if (!empty($history)): ?>
     <h2 style="font-size:16px;margin-top:28px;">Verlauf</h2>
