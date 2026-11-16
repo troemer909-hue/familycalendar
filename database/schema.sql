@@ -206,6 +206,12 @@ CREATE TABLE IF NOT EXISTS tasks (
   done_at DATETIME NULL,
   done_by INT NULL,
   sort_order INT NOT NULL DEFAULT 0,
+  -- Zufällige Aufgaben-Zuteilung (siehe task_assignment_pools unten): ob
+  -- diese Aufgabe bei einer Ziehung berücksichtigt wird. Nur relevant,
+  -- wenn die zugehörige Liste einen Pool hat - Default 1, damit neue
+  -- Aufgaben automatisch mit einbezogen werden, bis man sie bewusst
+  -- herausnimmt.
+  auto_assign TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (task_list_id) REFERENCES task_lists(id) ON DELETE CASCADE,
   FOREIGN KEY (assigned_member_id) REFERENCES family_members(id) ON DELETE SET NULL,
@@ -257,6 +263,32 @@ CREATE TABLE IF NOT EXISTS shopping_list_items (
   FOREIGN KEY (checked_by) REFERENCES family_members(id) ON DELETE SET NULL,
   FOREIGN KEY (source_stock_item_id) REFERENCES household_stock_items(id) ON DELETE SET NULL,
   INDEX idx_family_checked (family_id, checked)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------
+-- Zufällige Aufgaben-Zuteilung ("Losliste")
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS task_assignment_pools (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  task_list_id INT NOT NULL,
+  rhythm ENUM('daily','weekly','monthly') NOT NULL,
+  mode ENUM('random','fair') NOT NULL DEFAULT 'fair',
+  next_draw_at DATE NOT NULL,
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (task_list_id) REFERENCES task_lists(id) ON DELETE CASCADE,
+  UNIQUE KEY uniq_list_pool (task_list_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS task_assignment_pool_members (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  pool_id INT NOT NULL,
+  family_member_id INT NOT NULL,
+  max_tasks INT NULL,                       -- NULL = unbegrenzt
+  FOREIGN KEY (pool_id) REFERENCES task_assignment_pools(id) ON DELETE CASCADE,
+  FOREIGN KEY (family_member_id) REFERENCES family_members(id) ON DELETE CASCADE,
+  UNIQUE KEY uniq_pool_member (pool_id, family_member_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------
@@ -389,8 +421,12 @@ INSERT IGNORE INTO schema_migrations (migration) VALUES
   ('016_calendar_source_reminders.sql'),
   ('017_calendar_source_color.sql'),
   ('018_calendar_source_color_backfill.sql'),
+  ('016_calendar_source_reminders.sql'),
+  ('017_calendar_source_color.sql'),
+  ('018_calendar_source_color_backfill.sql'),
   ('019_shopping_list.sql'),
-  ('020_household_stock.sql');
+  ('020_household_stock.sql'),
+  ('021_task_assignment_pools.sql');
 
 CREATE TABLE IF NOT EXISTS self_update_runs (
   id INT PRIMARY KEY AUTO_INCREMENT,

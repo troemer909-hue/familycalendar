@@ -602,6 +602,43 @@ schnell unübersichtlich (einzelne Termine werden dort abgeschnitten).
   `sanitizeCalendarBack()` (`src/Helpers.php`) neu zusammengesetzt, da
   er aus einem Formularfeld kommt und damit potenziell manipulierbar ist.
 
+## Zufällige Aufgaben-Zuteilung (neu)
+
+Für Aufgabenlisten (siehe `task_lists.php`) lässt sich pro Liste eine
+"Zufalls-Zuteilung" einrichten: ein Kreis an Personen + Rhythmus
+(täglich/wöchentlich/monatlich) + Modus (Zufall oder Fair). Jede Aufgabe
+der Liste wird davon unabhängig per Los neu zugewiesen - praktisch, um
+in Familien mit mehreren Kindern Streit darüber zu vermeiden, wer welche
+Hausarbeit macht (siehe
+`docs/feature-ideas/aufgaben-zufallsverteilung.md`).
+
+- **Fair** schließt pro Aufgabe die Person aus, die sie zuletzt hatte
+  (solange eine andere Person noch Kapazität hat). **Zufall** lost ganz
+  ohne diese Einschränkung, auch mehrfach hintereinander dieselbe Person
+  möglich.
+- **Maximalzahl pro Person** (optional): begrenzt, wie viele Aufgaben
+  eine Person pro Ziehung höchstens bekommt. Ist die Gesamtkapazität
+  aller Personen im Pool ausgeschöpft, bleiben restliche Aufgaben dieser
+  Ziehung bewusst unzugeteilt, statt doch noch jemandem aufgezwungen zu
+  werden - funktioniert dadurch auch mit nur einer einzigen Person im
+  Pool (z.B. "maximal 3 von 5 Aufgaben pro Tag").
+- Einzelne Aufgaben lassen sich über den Button "Aus Losliste"/"In
+  Losliste" dauerhaft aus der Automatik herausnehmen.
+
+Die eigentliche Ziehung übernimmt ein Cron-Job, analog zu
+`bin/sync-calendar-sources.php`:
+
+```
+php /pfad/zum/projekt/bin/draw-task-assignments.php
+```
+
+Einmal täglich reicht, auch für wöchentliche/monatliche Pools - der Job
+prüft pro Pool selbst, ob der gewählte Rhythmus erreicht ist
+(`TaskAssignmentRunner::runDuePools()`). Jede neu eingeteilte Person
+bekommt eine Push-Benachrichtigung (gleiche Infrastruktur wie bei den
+Erinnerungen oben) - keine erneute Benachrichtigung, wenn eine Aufgabe
+nach der Ziehung bei derselben Person bleibt.
+
 ## Fix: "#1071 Specified key was too long" beim Import von schema.sql
 
 Auf manchen (meist älteren oder sehr sparsam konfigurierten) Shared-Hosting-
