@@ -289,7 +289,6 @@ CREATE TABLE IF NOT EXISTS task_assignment_pool_members (
   FOREIGN KEY (family_member_id) REFERENCES family_members(id) ON DELETE CASCADE,
   UNIQUE KEY uniq_pool_member (pool_id, family_member_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------
 -- Erinnerungen (nur für Personen mit Login)
@@ -418,9 +417,6 @@ INSERT IGNORE INTO schema_migrations (migration) VALUES
   ('013_categories.sql'),
   ('014_task_lists.sql'),
   ('015_task_list_assignment.sql'),
-  ('016_calendar_source_reminders.sql'),
-  ('017_calendar_source_color.sql'),
-  ('018_calendar_source_color_backfill.sql'),
   ('016_calendar_source_reminders.sql'),
   ('017_calendar_source_color.sql'),
   ('018_calendar_source_color_backfill.sql'),
