@@ -30,9 +30,9 @@ final class TaskAssignmentDraw
      * Kapazitätsgrenze (max_tasks) ist dagegen eine harte Regel und wird
      * nie zugunsten der Fairness gebrochen.
      *
-     * @param array<int, array{family_member_id:int, max_tasks:?int}> $members
+     * @param array<int, array{family_member_id:int, max_tasks:?int, position?:int}> $members
      * @param array<int, array{id:int, last_assigned_member_id:?int}> $tasks
-     * @param 'random'|'fair' $mode
+     * @param 'random'|'fair'|'fixed_order' $mode
      * @return array<int, ?int> Aufgaben-ID => gezogenes Mitglied, oder
      *                           null = diese Ziehung bleibt unzugeteilt
      *                           (Kapazität aller in Frage kommenden
@@ -40,6 +40,9 @@ final class TaskAssignmentDraw
      */
     public static function draw(array $members, array $tasks, string $mode): array
     {
+        if ($mode === 'fixed_order') {
+            usort($members, static fn (array $a, array $b): int => ($a['position'] ?? 0) <=> ($b['position'] ?? 0));
+        }
         $memberIds = array_map(static fn (array $m): int => $m['family_member_id'], $members);
         $maxByMember = array_combine($memberIds, array_map(static fn (array $m): ?int => $m['max_tasks'], $members));
         $countByMember = array_fill_keys($memberIds, 0);
@@ -56,6 +59,17 @@ final class TaskAssignmentDraw
 
             $candidates = $withCapacity;
             $lastAssigned = $task['last_assigned_member_id'];
+            if ($mode === 'fixed_order' && $totalMembers > 0) {
+                $start = 0;
+                if ($lastAssigned !== null) {
+                    $lastIndex = array_search($lastAssigned, $memberIds, true);
+                    if ($lastIndex !== false) {
+                        $start = ($lastIndex + 1) % $totalMembers;
+                    }
+                }
+                $ordered = array_merge(array_slice($memberIds, $start), array_slice($memberIds, 0, $start));
+                $candidates = array_values(array_intersect($ordered, $withCapacity));
+            }
             if ($mode === 'fair' && $totalMembers >= 2 && $lastAssigned !== null) {
                 $withoutLast = array_values(array_diff($withCapacity, [$lastAssigned]));
                 if (!empty($withoutLast)) {

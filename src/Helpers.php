@@ -18,12 +18,52 @@ function pwaHeadTags(): string
 {
     return <<<'HTML'
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#203650" />
+  <meta id="fk-theme-color" name="theme-color" content="#203650" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/app-icons/icon-192.png" />
   <link rel="apple-touch-icon" href="/app-icons/apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Family-Kalender" />
+  <script>
+    // Vor dem ersten Rendern anwenden: verhindert einen hellen Zwischenframe
+    // beim Laden einer Seite, wenn die gespeicherte Auswahl dunkel ist.
+    (function () {
+      var key = 'fk-theme';
+      var root = document.documentElement;
+      var media = window.matchMedia('(prefers-color-scheme: dark)');
+      var stored = null;
+      try { stored = localStorage.getItem(key); } catch (e) {}
+      if (stored === 'dark' || stored === 'light') root.setAttribute('data-theme', stored);
+      else root.removeAttribute('data-theme');
+
+      function updateThemeUi() {
+        var dark = root.getAttribute('data-theme') === 'dark' ||
+          (!root.hasAttribute('data-theme') && media.matches);
+        var meta = document.getElementById('fk-theme-color');
+        if (meta) meta.setAttribute('content', dark ? '#111827' : '#203650');
+        document.querySelectorAll('[data-theme-toggle]').forEach(function (button) {
+          button.textContent = dark ? '☀️ Helles Design' : '🌙 Dunkles Design';
+          button.setAttribute('aria-label', dark ? 'Helles Design aktivieren' : 'Dunkles Design aktivieren');
+          button.setAttribute('aria-pressed', dark ? 'true' : 'false');
+        });
+      }
+      updateThemeUi();
+      document.addEventListener('DOMContentLoaded', updateThemeUi, { once: true });
+      media.addEventListener('change', function () {
+        if (!root.hasAttribute('data-theme')) updateThemeUi();
+      });
+      document.addEventListener('click', function (event) {
+        var button = event.target instanceof Element ? event.target.closest('[data-theme-toggle]') : null;
+        if (!button) return;
+        var currentlyDark = root.getAttribute('data-theme') === 'dark' ||
+          (!root.hasAttribute('data-theme') && media.matches);
+        var next = currentlyDark ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem(key, next); } catch (e) {}
+        updateThemeUi();
+      });
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <!-- Nicht-blockierendes Nachladen: media="print" verhindert, dass der
@@ -377,6 +417,14 @@ function appChromeOpen(string $activeNav, string $extraSidebarHtml = '', string 
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17.5" cy="19.5" r="1.3"/></svg>
           <span>Einkaufsliste</span>
         </a>
+        <a href="household_stock.php" class="<?= $navClass('stock') ?>">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M6 7v13h12V7M9 7V4h6v3"/><path d="M9 11v5m3-5v5m3-5v5"/></svg>
+          <span>Vorratsliste</span>
+        </a>
+        <a href="meal_plan.php" class="<?= $navClass('household') ?>">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4m8-4v4M3 9h18M8 13h3m-3 4h8"/></svg>
+          <span>Essensplan</span>
+        </a>
         <a href="ics_export.php" class="<?= $navClass('ics') ?>">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
           <span>Kalender-Abo (ICS-Export)</span>
@@ -406,6 +454,7 @@ function appChromeOpen(string $activeNav, string $extraSidebarHtml = '', string 
       <?php endif; ?>
 
       <div class="nav-group nav-group-footer">
+        <button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false">🌙 Dunkles Design</button>
         <a href="logout.php" class="nav-link nav-link-muted">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
           <span>Abmelden</span>

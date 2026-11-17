@@ -145,4 +145,33 @@ final class TaskAssignmentDrawTest extends TestCase
 
         self::assertSame([10 => null], $result);
     }
+
+    public function testFixedOrderRotatesAfterLastAssignedMember(): void
+    {
+        $members = [
+            ['family_member_id' => 3, 'max_tasks' => null, 'position' => 2],
+            ['family_member_id' => 1, 'max_tasks' => null, 'position' => 0],
+            ['family_member_id' => 2, 'max_tasks' => null, 'position' => 1],
+        ];
+        $tasks = [
+            ['id' => 10, 'last_assigned_member_id' => null],
+            ['id' => 11, 'last_assigned_member_id' => 1],
+            ['id' => 12, 'last_assigned_member_id' => 2],
+            ['id' => 13, 'last_assigned_member_id' => 3],
+        ];
+        $result = TaskAssignmentDraw::draw($members, $tasks, 'fixed_order');
+        ksort($result);
+        self::assertSame([10 => 1, 11 => 2, 12 => 3, 13 => 1], $result);
+    }
+
+    public function testFixedOrderSkipsFullMemberAndRestartsIfLastMemberWasRemoved(): void
+    {
+        $members = [
+            ['family_member_id' => 2, 'max_tasks' => 0, 'position' => 0],
+            ['family_member_id' => 3, 'max_tasks' => null, 'position' => 1],
+        ];
+        self::assertSame([10 => 3], TaskAssignmentDraw::draw($members, [['id' => 10, 'last_assigned_member_id' => null]], 'fixed_order'));
+        $members[0]['max_tasks'] = null;
+        self::assertSame([11 => 2], TaskAssignmentDraw::draw($members, [['id' => 11, 'last_assigned_member_id' => 99]], 'fixed_order'));
+    }
 }

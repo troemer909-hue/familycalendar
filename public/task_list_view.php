@@ -62,7 +62,7 @@ $error = $_GET['error'] ?? null;
             <div style="flex:1;min-width:180px;">
               <span style="<?= $t['is_done'] ? 'text-decoration:line-through;' : '' ?>"><?= h($t['title']) ?></span>
               <?php if ($t['reward_points'] !== null && $t['reward_points'] > 0): ?>
-                <span class="badge" style="margin-left:8px;background:#f59e0b;color:#fff;font-size:12px;">+<?= (int) $t['reward_points'] ?> Punkte</span>
+                <span class="badge reward-badge" style="margin-left:8px;font-size:12px;">+<?= (int) $t['reward_points'] ?> Punkte</span>
               <?php endif; ?><br />
               <span class="hint-text">
                 <?php if ($t['assigned_member_name']): ?><?= h($t['assigned_member_name']) ?><?php endif; ?>

@@ -8,6 +8,7 @@ $listId = (int) ($_POST['list_id'] ?? 0);
 
 $memberIds = array_map('intval', $_POST['member_ids'] ?? []);
 $maxTasksByMember = $_POST['max_tasks'] ?? [];
+$positionsByMember = $_POST['position'] ?? [];
 
 $members = [];
 foreach ($memberIds as $memberId) {
@@ -15,6 +16,9 @@ foreach ($memberIds as $memberId) {
     $members[] = [
         'family_member_id' => $memberId,
         'max_tasks' => $raw !== '' ? (int) $raw : null,
+        'position' => isset($positionsByMember[$memberId]) && $positionsByMember[$memberId] !== ''
+            ? (int) $positionsByMember[$memberId]
+            : count($members),
     ];
 }
 

@@ -54,7 +54,7 @@ $openListId = (int) ($_GET['open'] ?? 0);
     </p>
 
     <?php if ($error): ?><p class="error-box"><?= h($error) ?></p><?php endif; ?>
-    <?php if ($notice): ?><p class="error-box" style="background:#dcfce7;color:#166534;"><?= h($notice) ?></p><?php endif; ?>
+    <?php if ($notice): ?><p class="success-box"><?= h($notice) ?></p><?php endif; ?>
 
     <?php if (empty($lists)): ?>
       <p class="hint-text">Noch keine Aufgabenliste angelegt.</p>
@@ -79,7 +79,7 @@ $openListId = (int) ($_GET['open'] ?? 0);
                     <div style="flex:1;min-width:180px;">
                       <span style="<?= $t['is_done'] ? 'text-decoration:line-through;' : '' ?>"><?= h($t['title']) ?></span>
                       <?php if ($t['reward_points'] !== null && $t['reward_points'] > 0): ?>
-                        <span class="badge" style="margin-left:8px;background:#f59e0b;color:#fff;font-size:12px;">+<?= (int) $t['reward_points'] ?> Punkte</span>
+                        <span class="badge reward-badge" style="margin-left:8px;font-size:12px;">+<?= (int) $t['reward_points'] ?> Punkte</span>
                       <?php endif; ?>
                       <br />
                       <span class="hint-text">
@@ -198,6 +198,7 @@ $openListId = (int) ($_GET['open'] ?? 0);
                         <?= h($m['display_name']) ?>
                       </label>
                       <input type="number" name="max_tasks[<?= (int) $m['id'] ?>]" min="1" placeholder="unbegrenzt" style="width:120px;" value="<?= $existingMember && $existingMember['max_tasks'] !== null ? (int) $existingMember['max_tasks'] : '' ?>" />
+                      <input type="number" name="position[<?= (int) $m['id'] ?>]" min="0" aria-label="Rotationsposition für <?= h($m['display_name']) ?>" placeholder="Reihenfolge" style="width:110px;" value="<?= $existingMember ? (int) $existingMember['position'] : '' ?>" />
                     </div>
                   <?php endforeach; ?>
                   <label>Rhythmus</label>
@@ -212,6 +213,9 @@ $openListId = (int) ($_GET['open'] ?? 0);
                   </div>
                   <div class="row" style="align-items:center;">
                     <label class="checkbox-label"><input type="radio" name="mode" value="random"<?= ($pool['mode'] ?? '') === 'random' ? ' checked' : '' ?> /> Zufall (auch mehrfach hintereinander möglich)</label>
+                  </div>
+                  <div class="row" style="align-items:center;">
+                    <label class="checkbox-label"><input type="radio" name="mode" value="fixed_order"<?= ($pool['mode'] ?? '') === 'fixed_order' ? ' checked' : '' ?> /> Feste Reihenfolge (Personen nach Rotationsposition)</label>
                   </div>
                   <label class="checkbox-label" style="margin-top:10px;">
                     <input type="checkbox" name="active" value="1"<?= ($pool['active'] ?? true) ? ' checked' : '' ?> /> Automatik aktiv

@@ -363,11 +363,11 @@ final class TaskListController
         }
 
         $membersStmt = $db->prepare(
-            'SELECT tapm.family_member_id, tapm.max_tasks, fm.display_name
+            'SELECT tapm.family_member_id, tapm.max_tasks, tapm.position, fm.display_name
              FROM task_assignment_pool_members tapm
              JOIN family_members fm ON fm.id = tapm.family_member_id
              WHERE tapm.pool_id = :pool_id
-             ORDER BY fm.display_name ASC'
+             ORDER BY tapm.position ASC, fm.display_name ASC'
         );
         $membersStmt->execute(['pool_id' => $pool['id']]);
 
@@ -380,6 +380,7 @@ final class TaskListController
             'members' => array_map(static fn (array $r): array => [
                 'family_member_id' => (int) $r['family_member_id'],
                 'max_tasks' => $r['max_tasks'] !== null ? (int) $r['max_tasks'] : null,
+                'position' => (int) $r['position'],
                 'display_name' => $r['display_name'],
             ], $membersStmt->fetchAll()),
         ]);
@@ -409,8 +410,8 @@ final class TaskListController
         }
 
         $mode = (string) $request->input('mode', 'fair');
-        if (!in_array($mode, ['random', 'fair'], true)) {
-            Response::error('mode muss random oder fair sein.', 422);
+        if (!in_array($mode, ['random', 'fair', 'fixed_order'], true)) {
+            Response::error('mode muss random, fair oder fixed_order sein.', 422);
         }
 
         $activeInput = $request->input('active', true);
@@ -422,7 +423,7 @@ final class TaskListController
         }
 
         $sanitizedMembers = [];
-        foreach ($members as $m) {
+        foreach ($members as $index => $m) {
             $memberId = (int) (is_array($m) ? ($m['family_member_id'] ?? 0) : 0);
             $this->assertOwnMember($db, $memberId);
 
@@ -432,7 +433,8 @@ final class TaskListController
                 Response::error('max_tasks muss mindestens 1 sein (leer lassen für unbegrenzt).', 422);
             }
 
-            $sanitizedMembers[$memberId] = $maxTasks; // dedupliziert gleich mit
+            $position = max(0, (int) (is_array($m) ? ($m['position'] ?? $index) : $index));
+            $sanitizedMembers[$memberId] = ['max_tasks' => $maxTasks, 'position' => $position];
         }
 
         $existingPool = $this->findPool($db, $listId);
@@ -465,11 +467,11 @@ final class TaskListController
         }
 
         $insertMember = $db->prepare(
-            'INSERT INTO task_assignment_pool_members (pool_id, family_member_id, max_tasks)
-             VALUES (:pool_id, :member_id, :max_tasks)'
+            'INSERT INTO task_assignment_pool_members (pool_id, family_member_id, max_tasks, position)
+             VALUES (:pool_id, :member_id, :max_tasks, :position)'
         );
-        foreach ($sanitizedMembers as $memberId => $maxTasks) {
-            $insertMember->execute(['pool_id' => $poolId, 'member_id' => $memberId, 'max_tasks' => $maxTasks]);
+        foreach ($sanitizedMembers as $memberId => $member) {
+            $insertMember->execute(['pool_id' => $poolId, 'member_id' => $memberId, 'max_tasks' => $member['max_tasks'], 'position' => $member['position']]);
         }
 
         Response::json(['id' => $poolId, 'status' => 'saved']);
