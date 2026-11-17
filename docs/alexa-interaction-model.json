@@ -18,6 +18,33 @@
           "slots": [],
           "samples": ["wann ist mein nächster termin", "was ist mein nächster termin", "wann habe ich den nächsten termin", "nenne meinen nächsten termin"]
         },
+        {
+          "name": "AddEventIntent",
+          "slots": [
+            { "name": "title", "type": "AMAZON.SearchQuery" },
+            { "name": "date", "type": "AMAZON.DATE" },
+            { "name": "time", "type": "AMAZON.TIME" }
+          ],
+          "samples": [
+            "trag {title} für {date} um {time} uhr ein",
+            "trage {title} am {date} um {time} ein",
+            "plane {title} für {date} um {time}"
+          ]
+        },
+        {
+          "name": "DeleteEventIntent",
+          "slots": [
+            { "name": "title", "type": "AMAZON.SearchQuery" },
+            { "name": "date", "type": "AMAZON.DATE" },
+            { "name": "time", "type": "AMAZON.TIME" }
+          ],
+          "samples": [
+            "lösch meinen termin {title}",
+            "lösche {title}",
+            "lösche {title} am {date}",
+            "lösche {title} am {date} um {time} uhr"
+          ]
+        },
         { "name": "AMAZON.HelpIntent", "slots": [], "samples": [] },
         { "name": "AMAZON.CancelIntent", "slots": [], "samples": [] },
         { "name": "AMAZON.StopIntent", "slots": [], "samples": [] },
