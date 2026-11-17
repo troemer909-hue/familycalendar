@@ -54,6 +54,9 @@ final class AlexaController
         $intentData = is_array($payload['request']['intent'] ?? null) ? $payload['request']['intent'] : [];
         $intentName = (string) ($intentData['name'] ?? '');
         $slots = is_array($intentData['slots'] ?? null) ? $intentData['slots'] : [];
+        if ($intentName === 'GetPointsBalanceIntent') {
+            Response::json((new AlexaPointsIntentHandler())->handle());
+        }
         if (in_array($intentName, ['AddTaskIntent', 'CompleteTaskIntent', 'GetDueTasksIntent'], true)) {
             Response::json((new AlexaTaskIntentHandler())->handle($intentData));
         }

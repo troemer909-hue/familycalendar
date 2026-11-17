@@ -705,3 +705,9 @@ Alexa nach der Liste. Beim Abhaken wird eine Aufgabe nur dann markiert, wenn
 Titel und optionale Listen-/Fälligkeitsangaben genau einen offenen Treffer
 ergeben. Fällige Aufgaben werden über den bestehenden `dueTasks()`-Endpunkt
 familienweit gelesen.
+
+Mit `GetPointsBalanceIntent` kann das verknüpfte Mitglied den eigenen
+Punktestand abfragen. Alexa liest dafür ausschließlich den Saldo dieses
+Mitglieds vor; ein Saldo von null wird ebenfalls ausgesprochen. Punkte lassen
+sich nicht per Sprache ändern und andere Familienmitglieder sind nicht
+abfragbar.
