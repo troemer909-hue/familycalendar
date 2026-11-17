@@ -1,68 +1,44 @@
 # Rotierende Aufgaben
 
-## Problem / Motivation
-Viele Haushaltsaufgaben wiederholen sich regelmäßig, aber die Zuständigkeit soll zwischen Familienmitgliedern wechseln ("diese Woche Anna, nächste Woche Max beim Müll rausbringen"). Ohne Automatisierung muss das jede Woche manuell neu zugewiesen werden — genau die Art von Reibung, die eine Familien-App eigentlich abnehmen soll.
+## Umsetzungskonzept (Issue #58)
 
-## Zielgruppe & Nutzen
-Familien mit mehreren Erwachsenen/älteren Kindern, die Haushaltspflichten fair aufteilen wollen. Nutzen: eine Aufgabe einmal mit einer Rotation einrichten, die App weist automatisch im eingestellten Rhythmus neu zu.
+Die Rotation erweitert die bestehende automatische Aufgaben-Zuteilung in
+`task_assignment_pools`. Sie erzeugt keine neuen Aufgabeninstanzen und
+braucht keine separate Rotations- oder Verlaufstabelle. Jede Aufgabe rotiert
+unabhängig anhand ihrer aktuellen `assigned_member_id`-Zuweisung.
 
-## Funktionsumfang (v1)
-- Aufgabe (siehe `todo-aufgabenliste.md`) mit Rotationsregel: Liste von Familienmitgliedern in fester Reihenfolge + Rhythmus (täglich/wöchentlich/monatlich).
-- Beim Erreichen des nächsten Intervalls wird automatisch eine neue Aufgaben-Instanz mit dem nächsten Mitglied in der Rotation erzeugt (analog zur Materialisierung wiederkehrender Termine über `recurrence_rule`/`recurrence_parent_id` bei `events`).
-- Rotation pausieren/beenden, Reihenfolge nachträglich ändern.
-- Verlaufsansicht: wer hatte die Aufgabe wann.
+## Verhalten
 
-## User Stories
-- Als Elternteil möchte ich eine Aufgabe mit einer Liste von Personen anlegen, damit die Zuständigkeit automatisch rotiert.
-- Als Familienmitglied möchte ich sehen, wann ich das nächste Mal dran bin, damit ich mich darauf einstellen kann.
-- Als Elternteil möchte ich die Rotation pausieren können (z.B. während des Urlaubs eines Mitglieds), ohne die ganze Aufgabe zu löschen.
+- Pool-Modus `fixed_order`; die Mitgliederreihenfolge steht in
+  `task_assignment_pool_members.position`.
+- Eine Aufgabe ohne bisherige Zuweisung startet beim ersten Listenplatz.
+- Sonst beginnt die Suche beim nächsten Mitglied nach der bisherigen
+  Zuständigkeit und läuft zyklisch weiter.
+- Mitglieder, deren `max_tasks` für die aktuelle Ziehung erreicht ist, werden
+  übersprungen. Sind alle Mitglieder ausgelastet, bleibt die Aufgabe
+  unzugewiesen.
+- Wird das zuletzt zuständige Mitglied aus dem Pool entfernt, beginnt die
+  Aufgabe wieder beim ersten Listenplatz.
+- Jede Aufgabe behält ihre eigene Rotationsposition. Ein Cron-Lauf wendet
+  dieselbe vorhandene Ziehungslogik wie für die Zufalls- und Fair-Modi an.
+- Die Reihenfolge lässt sich über Positionsnummern im Pool-Formular ändern;
+  beim Speichern werden die Positionen auf `0..n-1` normalisiert.
 
-## Datenmodell
-Erweiterung von `tasks` (aus `todo-aufgabenliste.md`) um eine Rotationsregel, materialisiert analog zum bestehenden `events.recurrence_parent_id`-Muster:
+## Datenbank
 
-```sql
-CREATE TABLE IF NOT EXISTS task_rotations (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  task_template_id INT NOT NULL,            -- tasks.id des "Master"-Eintrags (Titel/Beschreibung)
-  interval_unit ENUM('daily','weekly','monthly') NOT NULL,
-  interval_count INT NOT NULL DEFAULT 1,
-  next_run_at DATE NOT NULL,
-  active TINYINT(1) NOT NULL DEFAULT 1,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (task_template_id) REFERENCES tasks(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+Die bestehenden Tabellen werden erweitert:
 
-CREATE TABLE IF NOT EXISTS task_rotation_members (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  rotation_id INT NOT NULL,
-  family_member_id INT NOT NULL,
-  position INT NOT NULL,                    -- Reihenfolge in der Rotation
-  FOREIGN KEY (rotation_id) REFERENCES task_rotations(id) ON DELETE CASCADE,
-  FOREIGN KEY (family_member_id) REFERENCES family_members(id) ON DELETE CASCADE,
-  UNIQUE KEY uniq_rotation_position (rotation_id, position)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
-`tasks` bekommt zusätzlich ein nullable `rotation_id INT NULL` (Fremdschlüssel auf `task_rotations`), um materialisierte Instanzen ihrer Rotation zuzuordnen — exakt das gleiche Prinzip wie `recurrence_parent_id` bei `events`.
+- `task_assignment_pools.mode` akzeptiert zusätzlich `fixed_order`.
+- `task_assignment_pool_members.position INT NOT NULL DEFAULT 0` speichert
+  die Reihenfolge.
 
-## API-Endpunkte
-- `POST /api/tasks/{id}/rotation` — Rotation für eine bestehende Aufgabe einrichten (`members[]` in Reihenfolge, `interval_unit`, `interval_count`).
-- `PATCH /api/task-rotations/{id}` — Reihenfolge/Rhythmus ändern, pausieren (`active=0`).
-- `GET /api/task-rotations/{id}` — aktuelle Rotation + Verlauf (welche `tasks`-Instanzen daraus entstanden sind).
-- Hintergrundjob (siehe `bin/send-reminders.php` als Vorbild für einen Cron-Skript-Ansatz): `bin/advance-task-rotations.php`, erzeugt fällige neue `tasks`-Instanzen und erhöht `next_run_at`.
+Migration `024_task_assignment_fixed_order.sql` ergänzt beide Änderungen
+idempotent. `database/schema.sql` enthält denselben endgültigen Zustand für
+Neuinstallationen.
 
-## UI/UX
-Erweiterung des Aufgaben-Formulars (`task_form.php` aus `todo-aufgabenliste.md`) um einen optionalen "Rotation einrichten"-Abschnitt (Mitglieder per Drag&Drop oder Dropdown-Liste sortieren, Rhythmus wählen). In der Aufgabenliste ein Hinweis-Badge "rotiert" mit Tooltip "nächste Person: X ab dem Y".
+## Abgrenzung
 
-## Abhängigkeiten & Integration
-Setzt `todo-aufgabenliste.md` voraus (gleiche `tasks`-Tabelle). Technisch eng verwandt mit der bestehenden `recurrence_rule`/RRule-Logik bei Terminen (`src/Core/RRule.php`), nutzt aber ein einfacheres festes Intervall statt vollständiger RRULE-Syntax, da eine Personen-Rotation andere Anforderungen hat als Zeit-Wiederholung.
-
-## Aufwandsschätzung
-**L.** Zwei neue Tabellen, ein neuer Cron-Job, UI für Reihenfolge-Verwaltung, plus Sonderfälle (Mitglied aus Rotation entfernt, während es "dran" ist; Rotation während aktiver Aufgabe ändern).
-
-## Offene Fragen / Risiken
-- Was passiert, wenn ein rotierendes Mitglied aus der Familie entfernt wird (`member_downgrade.php`)? Rotation muss automatisch bereinigt werden.
-- Soll eine verpasste/nicht erledigte Aufgabe die Rotation blockieren oder trotzdem weiterlaufen?
-- Cron-Infrastruktur: `bin/send-reminders.php` setzt bereits einen externen Cron-Aufruf voraus (siehe README) — dieselbe Konvention gilt hier, erhöht aber die Hürde für Self-Hosting-Betreiber, die noch keinen Cron eingerichtet haben.
-
-## Out of Scope (v1)
-Ungleich gewichtete Rotation (manche Mitglieder öfter als andere), automatisches Tauschen zwischen zwei Personen, Benachrichtigung bei Rotationswechsel (kann über bestehende Reminder-Infrastruktur nachgezogen werden).
+Ein früherer Entwurf sah separate Rotationsregeln, neu erzeugte Aufgaben und
+eine Verlaufsansicht vor. Issue #58 ersetzt diesen Entwurf durch die
+Wiederverwendung der Aufgabenlisten-Pools. Pausieren einzelner Mitglieder,
+Urlaubslogik und eine Rotationshistorie sind nicht Teil dieser Erweiterung.

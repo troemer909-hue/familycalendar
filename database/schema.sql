@@ -296,7 +296,7 @@ CREATE TABLE IF NOT EXISTS task_assignment_pools (
   id INT PRIMARY KEY AUTO_INCREMENT,
   task_list_id INT NOT NULL,
   rhythm ENUM('daily','weekly','monthly') NOT NULL,
-  mode ENUM('random','fair') NOT NULL DEFAULT 'fair',
+  mode ENUM('random','fair','fixed_order') NOT NULL DEFAULT 'fair',
   next_draw_at DATE NOT NULL,
   active TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -309,6 +309,7 @@ CREATE TABLE IF NOT EXISTS task_assignment_pool_members (
   pool_id INT NOT NULL,
   family_member_id INT NOT NULL,
   max_tasks INT NULL,                       -- NULL = unbegrenzt
+  position INT NOT NULL DEFAULT 0,
   FOREIGN KEY (pool_id) REFERENCES task_assignment_pools(id) ON DELETE CASCADE,
   FOREIGN KEY (family_member_id) REFERENCES family_members(id) ON DELETE CASCADE,
   UNIQUE KEY uniq_pool_member (pool_id, family_member_id)
@@ -448,7 +449,8 @@ INSERT IGNORE INTO schema_migrations (migration) VALUES
   ('020_household_stock.sql'),
   ('021_task_assignment_pools.sql'),
   ('022_member_points_ledger.sql'),
-  ('023_alexa_account_linking.sql');
+  ('023_alexa_account_linking.sql'),
+  ('024_task_assignment_fixed_order.sql');
 
 -- Alexa account linking credentials (see migration 023).
 CREATE TABLE IF NOT EXISTS alexa_links (

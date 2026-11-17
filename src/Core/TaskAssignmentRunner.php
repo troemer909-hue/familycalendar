@@ -38,12 +38,13 @@ final class TaskAssignmentRunner
         $listId = (int) $pool['task_list_id'];
 
         $membersStmt = $db->prepare(
-            'SELECT family_member_id, max_tasks FROM task_assignment_pool_members WHERE pool_id = :pool_id'
+            'SELECT family_member_id, max_tasks, position FROM task_assignment_pool_members WHERE pool_id = :pool_id ORDER BY position, family_member_id'
         );
         $membersStmt->execute(['pool_id' => $poolId]);
         $members = array_map(static fn (array $r): array => [
             'family_member_id' => (int) $r['family_member_id'],
             'max_tasks' => $r['max_tasks'] !== null ? (int) $r['max_tasks'] : null,
+            'position' => (int) $r['position'],
         ], $membersStmt->fetchAll());
 
         $tasksStmt = $db->prepare(
