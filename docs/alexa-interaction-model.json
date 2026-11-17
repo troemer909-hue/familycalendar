@@ -19,6 +19,53 @@
           "samples": ["wann ist mein nächster termin", "was ist mein nächster termin", "wann habe ich den nächsten termin", "nenne meinen nächsten termin"]
         },
         {
+          "name": "AddEventIntent",
+          "slots": [
+            { "name": "title", "type": "AMAZON.SearchQuery" },
+            { "name": "date", "type": "AMAZON.DATE" },
+            { "name": "time", "type": "AMAZON.TIME" }
+          ],
+          "samples": [
+            "trag {title} für {date} um {time} uhr ein",
+            "trage {title} am {date} um {time} ein",
+            "plane {title} für {date} um {time}"
+          ]
+        },
+        {
+          "name": "DeleteEventIntent",
+          "slots": [
+            { "name": "title", "type": "AMAZON.SearchQuery" },
+            { "name": "date", "type": "AMAZON.DATE" },
+            { "name": "time", "type": "AMAZON.TIME" }
+          ],
+          "samples": [
+            "lösch meinen termin {title}",
+            "lösche {title}",
+            "lösche {title} am {date}",
+            "lösche {title} am {date} um {time} uhr"
+          ]
+        },
+        {
+          "name": "AddShoppingItemIntent",
+          "slots": [{ "name": "item", "type": "AMAZON.SearchQuery" }],
+          "samples": ["füge {item} zur einkaufsliste hinzu", "setz {item} auf die einkaufsliste", "ich brauche {item}"]
+        },
+        {
+          "name": "CheckShoppingItemIntent",
+          "slots": [{ "name": "item", "type": "AMAZON.SearchQuery" }],
+          "samples": ["hak {item} auf der einkaufsliste ab", "ich habe {item} eingekauft", "markiere {item} als erledigt"]
+        },
+        {
+          "name": "ReadShoppingListIntent",
+          "slots": [],
+          "samples": ["was steht auf der einkaufsliste", "lies meine einkaufsliste vor", "was muss ich einkaufen"]
+        },
+        {
+          "name": "ClearCheckedShoppingItemsIntent",
+          "slots": [],
+          "samples": ["leer die einkaufsliste", "entferne die abgehakten artikel", "räume die erledigten einkäufe weg"]
+        },
+        {
           "name": "FlagLowStockIntent",
           "slots": [{ "name": "item", "type": "AMAZON.SearchQuery" }],
           "samples": ["{item} wird knapp", "{item} geht zur neige", "melde {item} als knapp"]
