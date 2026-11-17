@@ -12,6 +12,9 @@ final class Request
     public array $body = [];
     public array $params = [];   // wird vom Router mit {id} etc. befüllt
     public ?string $bearerToken;
+    public readonly string $rawBody;
+    /** @var array<string,string> */
+    public readonly array $headers;
 
     /**
      * Ohne Argumente verhält sich das wie bisher: Methode/Pfad/Query/Body/
@@ -23,13 +26,16 @@ final class Request
      *
      * @param array<string,mixed>|null $query
      * @param array<string,mixed>|null $body
+     * @param array<string,string> $headers
      */
     public function __construct(
         ?string $method = null,
         ?string $path = null,
         ?array $query = null,
         ?array $body = null,
-        ?string $bearerToken = null
+        ?string $bearerToken = null,
+        ?string $rawBody = null,
+        array $headers = []
     ) {
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
 
@@ -44,11 +50,16 @@ final class Request
             parse_str(parse_url($uri, PHP_URL_QUERY) ?? '', $this->query);
         }
 
+        $this->rawBody = $rawBody ?? (file_get_contents('php://input') ?: '');
+        $this->headers = $headers !== [] ? $headers : [
+            'signature' => (string) ($_SERVER['HTTP_SIGNATURE'] ?? ''),
+            'signaturecertchainurl' => (string) ($_SERVER['HTTP_SIGNATURECERTCHAINURL'] ?? ''),
+        ];
+
         if ($body !== null) {
             $this->body = $body;
         } else {
-            $raw = file_get_contents('php://input') ?: '';
-            $decoded = json_decode($raw, true);
+            $decoded = json_decode($this->rawBody, true);
             $this->body = is_array($decoded) ? $decoded : [];
         }
 

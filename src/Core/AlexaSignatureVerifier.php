@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Familienkalender\Core;
 
 /** Verifies Amazon's signed Alexa request envelope before application code runs. */
-final class AlexaSignatureVerifier
+final class AlexaSignatureVerifier implements AlexaRequestVerifier
 {
     private const CERT_HOST = 's3.amazonaws.com';
     private const CERT_PATH = '/echo.api/echo-api-cert.pem';
