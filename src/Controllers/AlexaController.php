@@ -63,8 +63,8 @@ final class AlexaController
         if ($intentName === 'DeleteEventIntent') {
             $this->deleteEvent($intentData, $slots);
         }
-        if (in_array($name, ['AddShoppingItemIntent', 'CheckShoppingItemIntent', 'ReadShoppingListIntent', 'ClearCheckedShoppingItemsIntent'], true)) {
-            $this->handleShoppingIntent($name, $slots);
+        if (in_array($intentName, ['AddShoppingItemIntent', 'CheckShoppingItemIntent', 'ReadShoppingListIntent', 'ClearCheckedShoppingItemsIntent'], true)) {
+            $this->handleShoppingIntent($intentName, $slots);
         }
 
         $today = new \DateTimeImmutable('today');
