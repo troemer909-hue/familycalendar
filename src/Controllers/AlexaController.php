@@ -60,6 +60,9 @@ final class AlexaController
         if ($name === 'DeleteEventIntent') {
             $this->deleteEvent($intent, $slots);
         }
+        if (in_array($name, ['AddShoppingItemIntent', 'CheckShoppingItemIntent', 'ReadShoppingListIntent', 'ClearCheckedShoppingItemsIntent'], true)) {
+            $this->handleShoppingIntent($name, $slots);
+        }
 
         $today = new \DateTimeImmutable('today');
         if ($name === 'GetTodayEventsIntent') {
@@ -101,6 +104,74 @@ final class AlexaController
             }
         }
         Response::json(['version' => '1.0', 'response' => ['outputSpeech' => ['type' => 'PlainText', 'text' => $text], 'shouldEndSession' => true]]);
+    }
+
+    /** @param array<string,mixed> $slots */
+    private function handleShoppingIntent(string $intent, array $slots): never
+    {
+        $controller = new ShoppingListController();
+        if ($intent === 'AddShoppingItemIntent') {
+            $item = trim((string) ($slots['item']['value'] ?? ''));
+            if ($item === '') {
+                Response::json(['version' => '1.0', 'response' => [
+                    'outputSpeech' => ['type' => 'PlainText', 'text' => 'Was soll ich hinzufügen?'],
+                    'directives' => [['type' => 'Dialog.ElicitSlot', 'slotToElicit' => 'item', 'updatedIntent' => ['name' => $intent, 'slots' => $slots]]],
+                    'shouldEndSession' => false,
+                ]]);
+            }
+            $this->capture(static fn() => $controller->create(new Request('POST', '/api/shopping-list', [], ['label' => $item])));
+            $this->say('Ich habe ' . $item . ' zur Einkaufsliste hinzugefügt.');
+        }
+
+        if ($intent === 'CheckShoppingItemIntent') {
+            $item = trim((string) ($slots['item']['value'] ?? ''));
+            if ($item === '') $this->say('Welchen Artikel soll ich abhaken?');
+            $items = $this->capture(static fn() => $controller->index(new Request('GET', '/api/shopping-list')))['data'];
+            $open = array_values(array_filter($items, static fn(array $entry): bool => !$entry['checked']));
+            $matches = $this->matchShoppingItems($item, $open);
+            if (count($matches) === 1) {
+                $request = new Request('PUT', '/api/shopping-list/' . $matches[0]['id'], [], ['checked' => true]);
+                $request->params['id'] = (string) $matches[0]['id'];
+                $this->capture(static fn() => $controller->update($request));
+                $this->say($matches[0]['label'] . ' ist abgehakt.');
+            }
+            if (count($matches) > 1) $this->say('Meinst du ' . implode(' oder ', array_map(static fn(array $entry): string => '„' . $entry['label'] . '“', $matches)) . '?');
+            $this->say('Ich finde „' . $item . '“ nicht auf der Einkaufsliste.');
+        }
+
+        if ($intent === 'ReadShoppingListIntent') {
+            $items = $this->capture(static fn() => $controller->index(new Request('GET', '/api/shopping-list')))['data'];
+            $open = array_values(array_filter($items, static fn(array $entry): bool => !$entry['checked']));
+            if (!$open) $this->say('Deine Einkaufsliste ist leer.');
+            $limit = 10;
+            $text = 'Auf deiner Einkaufsliste stehen: ' . implode(', ', array_column(array_slice($open, 0, $limit), 'label'));
+            if (count($open) > $limit) $text .= ' und ' . (count($open) - $limit) . ' weitere';
+            $this->say($text . '.');
+        }
+
+        if ($intent === 'ClearCheckedShoppingItemsIntent') {
+            $this->capture(static fn() => $controller->clearChecked(new Request('POST', '/api/shopping-list/clear-checked')));
+            $this->say('Die abgehakten Artikel wurden von der Einkaufsliste entfernt.');
+        }
+        $this->respondError(400);
+    }
+
+    /** @param array<int,array<string,mixed>> $items @return array<int,array<string,mixed>> */
+    private function matchShoppingItems(string $spoken, array $items): array
+    {
+        $normalize = static function (string $value): string {
+            $value = mb_strtolower(trim($value));
+            return trim((string) preg_replace('/[^\p{L}\p{N}]+/u', ' ', $value));
+        };
+        $needle = $normalize($spoken);
+        if ($needle === '') return [];
+        $matches = [];
+        foreach ($items as $entry) {
+            $label = $normalize((string) $entry['label']);
+            similar_text($needle, $label, $similarity);
+            if (str_contains($label, $needle) || str_contains($needle, $label) || $similarity >= 70) $matches[] = $entry;
+        }
+        return $matches;
     }
 
     private function addEvent(array $intent, array $slots): never
