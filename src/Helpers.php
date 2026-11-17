@@ -417,14 +417,6 @@ function appChromeOpen(string $activeNav, string $extraSidebarHtml = '', string 
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9.5" cy="19.5" r="1.3"/><circle cx="17.5" cy="19.5" r="1.3"/></svg>
           <span>Einkaufsliste</span>
         </a>
-        <a href="household_stock.php" class="<?= $navClass('stock') ?>">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M6 7v13h12V7M9 7V4h6v3"/><path d="M9 11v5m3-5v5m3-5v5"/></svg>
-          <span>Vorratsliste</span>
-        </a>
-        <a href="meal_plan.php" class="<?= $navClass('household') ?>">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4m8-4v4M3 9h18M8 13h3m-3 4h8"/></svg>
-          <span>Essensplan</span>
-        </a>
         <a href="ics_export.php" class="<?= $navClass('ics') ?>">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
           <span>Kalender-Abo (ICS-Export)</span>

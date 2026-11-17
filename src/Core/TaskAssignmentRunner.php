@@ -38,24 +38,23 @@ final class TaskAssignmentRunner
         $listId = (int) $pool['task_list_id'];
 
         $membersStmt = $db->prepare(
-            'SELECT family_member_id, max_tasks, position FROM task_assignment_pool_members WHERE pool_id = :pool_id ORDER BY position ASC, family_member_id ASC'
+            'SELECT family_member_id, max_tasks FROM task_assignment_pool_members WHERE pool_id = :pool_id'
         );
         $membersStmt->execute(['pool_id' => $poolId]);
         $members = array_map(static fn (array $r): array => [
             'family_member_id' => (int) $r['family_member_id'],
             'max_tasks' => $r['max_tasks'] !== null ? (int) $r['max_tasks'] : null,
-            'position' => (int) $r['position'],
         ], $membersStmt->fetchAll());
 
         $tasksStmt = $db->prepare(
-            'SELECT id, title, assigned_member_id, last_assigned_member_id FROM tasks WHERE task_list_id = :list_id AND auto_assign = 1'
+            'SELECT id, title, assigned_member_id FROM tasks WHERE task_list_id = :list_id AND auto_assign = 1'
         );
         $tasksStmt->execute(['list_id' => $listId]);
         $taskRows = $tasksStmt->fetchAll();
 
         $tasks = array_map(static fn (array $r): array => [
             'id' => (int) $r['id'],
-            'last_assigned_member_id' => $r['last_assigned_member_id'] !== null ? (int) $r['last_assigned_member_id'] : null,
+            'last_assigned_member_id' => $r['assigned_member_id'] !== null ? (int) $r['assigned_member_id'] : null,
         ], $taskRows);
         $titleById = array_column($taskRows, 'title', 'id');
         $previousAssigneeById = array_column($taskRows, 'assigned_member_id', 'id');
@@ -63,7 +62,7 @@ final class TaskAssignmentRunner
         $assignments = TaskAssignmentDraw::draw($members, $tasks, $pool['mode']);
 
         $update = $db->prepare(
-            'UPDATE tasks SET last_assigned_member_id = COALESCE(assigned_member_id, last_assigned_member_id), assigned_member_id = :member_id, is_done = 0, done_at = NULL, done_by = NULL WHERE id = :id'
+            'UPDATE tasks SET assigned_member_id = :member_id, is_done = 0, done_at = NULL, done_by = NULL WHERE id = :id'
         );
 
         $drawn = 0;

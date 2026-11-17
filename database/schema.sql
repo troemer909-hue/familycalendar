@@ -201,7 +201,6 @@ CREATE TABLE IF NOT EXISTS tasks (
   task_list_id INT NOT NULL,
   title VARCHAR(255) NOT NULL,
   assigned_member_id INT NULL,
-  last_assigned_member_id INT NULL,
   due_date DATE NULL,
   is_done TINYINT(1) NOT NULL DEFAULT 0,
   done_at DATETIME NULL,
@@ -220,7 +219,6 @@ CREATE TABLE IF NOT EXISTS tasks (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (task_list_id) REFERENCES task_lists(id) ON DELETE CASCADE,
   FOREIGN KEY (assigned_member_id) REFERENCES family_members(id) ON DELETE SET NULL,
-  FOREIGN KEY (last_assigned_member_id) REFERENCES family_members(id) ON DELETE SET NULL,
   FOREIGN KEY (done_by) REFERENCES family_members(id) ON DELETE SET NULL,
   INDEX idx_task_list_done (task_list_id, is_done)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -298,7 +296,7 @@ CREATE TABLE IF NOT EXISTS task_assignment_pools (
   id INT PRIMARY KEY AUTO_INCREMENT,
   task_list_id INT NOT NULL,
   rhythm ENUM('daily','weekly','monthly') NOT NULL,
-  mode ENUM('random','fair','fixed_order') NOT NULL DEFAULT 'fair',
+  mode ENUM('random','fair') NOT NULL DEFAULT 'fair',
   next_draw_at DATE NOT NULL,
   active TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -306,26 +304,11 @@ CREATE TABLE IF NOT EXISTS task_assignment_pools (
   UNIQUE KEY uniq_list_pool (task_list_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS meal_plan_entries (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  family_id INT NOT NULL,
-  entry_date DATE NOT NULL,
-  meal_slot ENUM('breakfast','lunch','dinner','snack') NOT NULL,
-  label VARCHAR(255) NOT NULL,
-  notes TEXT NULL,
-  created_by_member_id INT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE CASCADE,
-  FOREIGN KEY (created_by_member_id) REFERENCES family_members(id) ON DELETE SET NULL,
-  UNIQUE KEY uniq_family_date_slot (family_id, entry_date, meal_slot)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 CREATE TABLE IF NOT EXISTS task_assignment_pool_members (
   id INT PRIMARY KEY AUTO_INCREMENT,
   pool_id INT NOT NULL,
   family_member_id INT NOT NULL,
   max_tasks INT NULL,                       -- NULL = unbegrenzt
-  position INT NOT NULL DEFAULT 0,
   FOREIGN KEY (pool_id) REFERENCES task_assignment_pools(id) ON DELETE CASCADE,
   FOREIGN KEY (family_member_id) REFERENCES family_members(id) ON DELETE CASCADE,
   UNIQUE KEY uniq_pool_member (pool_id, family_member_id)
@@ -465,9 +448,7 @@ INSERT IGNORE INTO schema_migrations (migration) VALUES
   ('020_household_stock.sql'),
   ('021_task_assignment_pools.sql'),
   ('022_member_points_ledger.sql'),
-  ('023_alexa_account_linking.sql'),
-  ('024_fixed_order_assignment.sql'),
-  ('025_meal_plan.sql');
+  ('023_alexa_account_linking.sql');
 
 -- Alexa account linking credentials (see migration 023).
 CREATE TABLE IF NOT EXISTS alexa_links (

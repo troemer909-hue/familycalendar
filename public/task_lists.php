@@ -198,7 +198,6 @@ $openListId = (int) ($_GET['open'] ?? 0);
                         <?= h($m['display_name']) ?>
                       </label>
                       <input type="number" name="max_tasks[<?= (int) $m['id'] ?>]" min="1" placeholder="unbegrenzt" style="width:120px;" value="<?= $existingMember && $existingMember['max_tasks'] !== null ? (int) $existingMember['max_tasks'] : '' ?>" />
-                      <input type="number" name="position[<?= (int) $m['id'] ?>]" min="0" aria-label="Rotationsposition für <?= h($m['display_name']) ?>" placeholder="Reihenfolge" style="width:110px;" value="<?= $existingMember ? (int) $existingMember['position'] : '' ?>" />
                     </div>
                   <?php endforeach; ?>
                   <label>Rhythmus</label>
@@ -213,9 +212,6 @@ $openListId = (int) ($_GET['open'] ?? 0);
                   </div>
                   <div class="row" style="align-items:center;">
                     <label class="checkbox-label"><input type="radio" name="mode" value="random"<?= ($pool['mode'] ?? '') === 'random' ? ' checked' : '' ?> /> Zufall (auch mehrfach hintereinander möglich)</label>
-                  </div>
-                  <div class="row" style="align-items:center;">
-                    <label class="checkbox-label"><input type="radio" name="mode" value="fixed_order"<?= ($pool['mode'] ?? '') === 'fixed_order' ? ' checked' : '' ?> /> Feste Reihenfolge (Personen nach Rotationsposition)</label>
                   </div>
                   <label class="checkbox-label" style="margin-top:10px;">
                     <input type="checkbox" name="active" value="1"<?= ($pool['active'] ?? true) ? ' checked' : '' ?> /> Automatik aktiv
