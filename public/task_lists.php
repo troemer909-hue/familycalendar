@@ -54,7 +54,7 @@ $openListId = (int) ($_GET['open'] ?? 0);
     </p>
 
     <?php if ($error): ?><p class="error-box"><?= h($error) ?></p><?php endif; ?>
-    <?php if ($notice): ?><p class="error-box" style="background:#dcfce7;color:#166534;"><?= h($notice) ?></p><?php endif; ?>
+    <?php if ($notice): ?><p class="success-box"><?= h($notice) ?></p><?php endif; ?>
 
     <?php if (empty($lists)): ?>
       <p class="hint-text">Noch keine Aufgabenliste angelegt.</p>
@@ -79,7 +79,7 @@ $openListId = (int) ($_GET['open'] ?? 0);
                     <div style="flex:1;min-width:180px;">
                       <span style="<?= $t['is_done'] ? 'text-decoration:line-through;' : '' ?>"><?= h($t['title']) ?></span>
                       <?php if ($t['reward_points'] !== null && $t['reward_points'] > 0): ?>
-                        <span class="badge" style="margin-left:8px;background:#f59e0b;color:#fff;font-size:12px;">+<?= (int) $t['reward_points'] ?> Punkte</span>
+                        <span class="badge reward-badge" style="margin-left:8px;font-size:12px;">+<?= (int) $t['reward_points'] ?> Punkte</span>
                       <?php endif; ?>
                       <br />
                       <span class="hint-text">

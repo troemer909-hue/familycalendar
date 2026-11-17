@@ -31,7 +31,7 @@ $notice = $_GET['notice'] ?? null;
     </p>
 
     <?php if ($error): ?><p class="error-box"><?= h($error) ?></p><?php endif; ?>
-    <?php if ($notice): ?><p class="error-box" style="background:#dcfce7;color:#166534;"><?= h($notice) ?></p><?php endif; ?>
+    <?php if ($notice): ?><p class="success-box"><?= h($notice) ?></p><?php endif; ?>
 
     <?php if (empty($items)): ?>
       <p class="hint-text">Noch keine Vorratsartikel angelegt.</p>

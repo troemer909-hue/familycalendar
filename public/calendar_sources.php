@@ -50,7 +50,7 @@ $colorPalette = ['#f97316', '#0ea5e9', '#a855f7', '#22c55e', '#ec4899', '#eab308
     </p>
 
     <?php if ($error): ?><p class="error-box"><?= h($error) ?></p><?php endif; ?>
-    <?php if ($notice): ?><p class="error-box" style="background:#dcfce7;color:#166534;"><?= h($notice) ?></p><?php endif; ?>
+    <?php if ($notice): ?><p class="success-box"><?= h($notice) ?></p><?php endif; ?>
 
     <h2 style="font-size:16px;">Bestehende Quellen</h2>
     <?php if (empty($sources)): ?>

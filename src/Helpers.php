@@ -18,12 +18,52 @@ function pwaHeadTags(): string
 {
     return <<<'HTML'
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#203650" />
+  <meta id="fk-theme-color" name="theme-color" content="#203650" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" href="/app-icons/icon-192.png" />
   <link rel="apple-touch-icon" href="/app-icons/apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Family-Kalender" />
+  <script>
+    // Vor dem ersten Rendern anwenden: verhindert einen hellen Zwischenframe
+    // beim Laden einer Seite, wenn die gespeicherte Auswahl dunkel ist.
+    (function () {
+      var key = 'fk-theme';
+      var root = document.documentElement;
+      var media = window.matchMedia('(prefers-color-scheme: dark)');
+      var stored = null;
+      try { stored = localStorage.getItem(key); } catch (e) {}
+      if (stored === 'dark' || stored === 'light') root.setAttribute('data-theme', stored);
+      else root.removeAttribute('data-theme');
+
+      function updateThemeUi() {
+        var dark = root.getAttribute('data-theme') === 'dark' ||
+          (!root.hasAttribute('data-theme') && media.matches);
+        var meta = document.getElementById('fk-theme-color');
+        if (meta) meta.setAttribute('content', dark ? '#111827' : '#203650');
+        document.querySelectorAll('[data-theme-toggle]').forEach(function (button) {
+          button.textContent = dark ? '☀️ Helles Design' : '🌙 Dunkles Design';
+          button.setAttribute('aria-label', dark ? 'Helles Design aktivieren' : 'Dunkles Design aktivieren');
+          button.setAttribute('aria-pressed', dark ? 'true' : 'false');
+        });
+      }
+      updateThemeUi();
+      document.addEventListener('DOMContentLoaded', updateThemeUi, { once: true });
+      media.addEventListener('change', function () {
+        if (!root.hasAttribute('data-theme')) updateThemeUi();
+      });
+      document.addEventListener('click', function (event) {
+        var button = event.target instanceof Element ? event.target.closest('[data-theme-toggle]') : null;
+        if (!button) return;
+        var currentlyDark = root.getAttribute('data-theme') === 'dark' ||
+          (!root.hasAttribute('data-theme') && media.matches);
+        var next = currentlyDark ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem(key, next); } catch (e) {}
+        updateThemeUi();
+      });
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <!-- Nicht-blockierendes Nachladen: media="print" verhindert, dass der
@@ -410,6 +450,7 @@ function appChromeOpen(string $activeNav, string $extraSidebarHtml = '', string 
       <?php endif; ?>
 
       <div class="nav-group nav-group-footer">
+        <button type="button" class="theme-toggle" data-theme-toggle aria-pressed="false">🌙 Dunkles Design</button>
         <a href="logout.php" class="nav-link nav-link-muted">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
           <span>Abmelden</span>

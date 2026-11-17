@@ -74,7 +74,7 @@ $error = $_GET['error'] ?? null;
         <?php foreach ($balances as $b): ?>
           <div class="member-row" style="align-items:center;">
             <div style="flex:1"><strong><?= h($b['display_name']) ?></strong></div>
-            <span class="badge" style="background:#f59e0b;color:#fff;padding:6px 12px;">
+            <span class="badge reward-badge" style="padding:6px 12px;">
               <?= (int) $b['balance'] ?> Punkte
             </span>
             <a href="?member_id=<?= (int) $b['member_id'] ?>" class="btn btn-secondary" style="font-size:13px;padding:4px 8px;">Verlauf</a>
@@ -116,7 +116,7 @@ $error = $_GET['error'] ?? null;
             <?php if ($h['task_title']): ?><strong><?= h($h['task_title']) ?></strong><br /><?php endif; ?>
             <span class="hint-text"><?php if ($h['created_by_name']): ?>von <?= h($h['created_by_name']) ?><?php endif; ?> · <?= h($h['created_at']) ?></span>
           </div>
-          <span class="badge" style="background:<?= (int)$h['points']>=0?'#10b981':'#ef4444' ?>;color:#fff;padding:6px 12px;">
+          <span class="badge <?= (int)$h['points']>=0 ? 'points-positive' : 'points-negative' ?>" style="padding:6px 12px;">
             <?= (int)$h['points']>0?'+':'' ?><?=(int)$h['points']?>
           </span>
           <span class="hint-text" style="margin-left:8px;"><?= h($h['reason']) ?></span>
