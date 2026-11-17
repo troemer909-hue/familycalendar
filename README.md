@@ -658,7 +658,7 @@ Für bereits bestehende Installationen: Migration
 `database/migrations/012_shorten_indexed_varchars.sql` einmalig
 ausführen.
 
-## Alexa Account Linking und Lese-Intents (Phase 1/2)
+## Alexa Account Linking und Kalender-Intents (Phase 1–3)
 
 In der Alexa Developer Console zuerst einen Custom Skill anlegen und dessen
 Skill-ID als `ALEXA_CLIENT_ID` und `ALEXA_SKILL_ID` in `.env` eintragen
@@ -686,3 +686,14 @@ Die unterstützten Intents lesen Termine für heute, morgen oder den nächsten
 Termin aus derselben Event-Abfrage wie die Web-API. Das Account-Linking-Token
 wird gehasht gegen `alexa_links` aufgelöst; fehlt eine gültige Verknüpfung,
 antwortet der Skill mit einer `LinkAccount`-Karte.
+
+Zusätzlich kann Alexa persönliche Termine anlegen und löschen. Für eine
+Anlage müssen Titel, Datum und Uhrzeit vorhanden sein; fehlende Angaben fragt
+Alexa per Slot-Elicitation nach. Amazon-Zeitwerte für Tageszeiten werden auf
+09:00 (morgens), 12:00 (mittags), 15:00 (nachmittags), 19:00 (abends),
+22:00 (nachts) beziehungsweise 00:00 (Mitternacht) abgebildet. Termine
+dauern standardmäßig eine Stunde und werden dem verknüpften Familienmitglied
+zugeordnet. Beim Löschen werden nur eigene Termine angezeigt (Familienadmins
+können alle Termine der Familie löschen). Mehrere passende Titel führen zu
+einer Rückfrage nach Datum und nötigenfalls Uhrzeit; Alexa löscht nie eine
+mehrdeutige Auswahl automatisch.
