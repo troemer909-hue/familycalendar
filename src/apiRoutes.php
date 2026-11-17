@@ -11,6 +11,7 @@ use Familienkalender\Controllers\EventController;
 use Familienkalender\Controllers\IcsExportController;
 use Familienkalender\Controllers\MemberController;
 use Familienkalender\Controllers\NotificationPreferenceController;
+use Familienkalender\Controllers\MemberPointsController;
 use Familienkalender\Controllers\PushSubscriptionController;
 use Familienkalender\Controllers\ReminderController;
 use Familienkalender\Controllers\HouseholdStockController;
@@ -49,6 +50,12 @@ function buildApiRouter(): Router
     $router->post('/api/members/{id}/invite', [$members, 'invite'], [$authMiddleware]);
     $router->delete('/api/members/{id}/login', [$members, 'downgrade'], [$authMiddleware]);
     $router->post('/api/members/{id}/transfer-admin', [$members, 'transferAdmin'], [$authMiddleware]);
+
+    // -- Belohnungssystem / Taschengeld (geschützt) -------------------------
+    $memberPoints = new MemberPointsController();
+    $router->get('/api/member-points', [$memberPoints, 'index'], [$authMiddleware]);
+    $router->get('/api/member-points/{memberId}/history', [$memberPoints, 'history'], [$authMiddleware]);
+    $router->post('/api/member-points/{memberId}/adjust', [$memberPoints, 'adjust'], [$authMiddleware]);
 
     // -- Termine (geschützt) --------------------------------------------------
     $events = new EventController();

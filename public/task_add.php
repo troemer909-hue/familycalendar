@@ -13,6 +13,11 @@ $payload = [
     'due_date' => trim($_POST['due_date'] ?? ''),
 ];
 
+if (!empty($_POST['reward_points'])) {
+    $rp = (int) $_POST['reward_points'];
+    if ($rp > 0) { $payload['reward_points'] = $rp; }
+}
+
 // Analog zu event_save.php: dieselbe repeat_freq/repeat_count/repeat_until-
 // Formularlogik, zu derselben RRULE-Syntax zusammengebaut.
 $freqMap = ['daily' => 'DAILY', 'weekly' => 'WEEKLY', 'monthly' => 'MONTHLY', 'yearly' => 'YEARLY'];

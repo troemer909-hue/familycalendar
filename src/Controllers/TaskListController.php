@@ -10,6 +10,7 @@ use Familienkalender\Core\Request;
 use Familienkalender\Core\Response;
 use Familienkalender\Core\RRule;
 use Familienkalender\Core\TenantContext;
+use Familienkalender\Controllers\MemberPointsController;
 
 /**
  * Geteilte Aufgaben-/Einkaufslisten pro Familie (siehe
@@ -158,7 +159,7 @@ final class TaskListController
         $this->findOwnList($db, $listId);
 
         $stmt = $db->prepare(
-            'SELECT t.id, t.title, t.due_date, t.is_done, t.done_at, t.auto_assign,
+            'SELECT t.id, t.title, t.due_date, t.is_done, t.done_at, t.reward_points, t.auto_assign,
                     t.assigned_member_id, fm.display_name AS assigned_member_name
              FROM tasks t
              LEFT JOIN family_members fm ON fm.id = t.assigned_member_id
@@ -172,6 +173,7 @@ final class TaskListController
             'title' => $row['title'],
             'due_date' => $row['due_date'],
             'is_done' => (bool) $row['is_done'],
+            'reward_points' => $row['reward_points'] !== null ? (int) $row['reward_points'] : null,
             'assigned_member_id' => $row['assigned_member_id'] !== null ? (int) $row['assigned_member_id'] : null,
             'assigned_member_name' => $row['assigned_member_name'],
             'auto_assign' => (bool) $row['auto_assign'],
@@ -209,6 +211,16 @@ final class TaskListController
         $dueDate = $this->sanitizeDueDate($request->input('due_date'));
         $recurrenceRule = trim((string) $request->input('recurrence_rule', '')) ?: null;
 
+        // Belohnungspunkte (Issue #57) – nur Admins dürfen Punkte setzen.
+        $rewardPoints = null;
+        if (TenantContext::isAdmin()) {
+            $rpRaw = $request->input('reward_points');
+            if ($rpRaw !== null && $rpRaw !== '') {
+                $rp = (int) $rpRaw;
+                if ($rp > 0) { $rewardPoints = $rp; }
+            }
+        }
+
         $dueDates = [$dueDate];
         if ($recurrenceRule !== null) {
             if ($dueDate === null) {
@@ -226,8 +238,8 @@ final class TaskListController
         }
 
         $insert = $db->prepare(
-            'INSERT INTO tasks (task_list_id, title, assigned_member_id, due_date)
-             VALUES (:task_list_id, :title, :assigned_member_id, :due_date)'
+            'INSERT INTO tasks (task_list_id, title, assigned_member_id, due_date, reward_points)' . "\n" .
+            ' VALUES (:task_list_id, :title, :assigned_member_id, :due_date, :reward_points)'
         );
 
         $firstId = null;
@@ -237,6 +249,7 @@ final class TaskListController
                 'title' => $title,
                 'assigned_member_id' => $assignedMemberId,
                 'due_date' => $occurrenceDueDate,
+                'reward_points' => $rewardPoints,
             ]);
             $firstId ??= (int) $db->lastInsertId();
         }
@@ -295,6 +308,25 @@ final class TaskListController
             'auto_assign' => $autoAssign ? 1 : 0,
             'id' => $id,
         ]);
+
+        // -- Automatische Gutschrift/Stornobuchung bei is_done-Wechsel (Issue #57) ---
+        $oldDone = (bool) $task['is_done'];
+        $newDone = (bool) $isDone;
+        if ($oldDone !== $newDone) {
+            $rewardPoints = $task['reward_points'] ?? null;
+
+            if ($newDone && $rewardPoints !== null && $rewardPoints > 0 && $doneBy !== null) {
+                MemberPointsController::createLedgerEntry($db, (int) $doneBy, $id, (int) $rewardPoints, 'task_completed');
+            } elseif (!$newDone && $rewardPoints !== null && (int) $rewardPoints > 0 && $task['done_by'] !== null) {
+                // $task['done_by'] ist der VOR diesem Update gelesene Stand -
+                // also noch die Person, die die Aufgabe ursprünglich erledigt
+                // hatte (die lokale $doneBy-Variable ist an dieser Stelle
+                // bereits auf null zurückgesetzt, siehe oben).
+                MemberPointsController::createLedgerEntry(
+                    $db, (int) $task['done_by'], $id, -(int) $rewardPoints, 'task_reverted'
+                );
+            }
+        }
 
         Response::json(['id' => $id, 'is_done' => $isDone]);
     }
@@ -497,15 +529,16 @@ final class TaskListController
      * immer zu genau einer Liste, deren family_id ist bereits die
      * maßgebliche Quelle.
      *
-     * @return array{id:int,title:string,assigned_member_id:?int,due_date:?string,is_done:int,done_at:?string,done_by:?int,auto_assign:int}
+     * @return array{id:int,title:string,assigned_member_id:?int,due_date:?string,is_done:int,done_at:?string,done_by:?int,reward_points:?int,auto_assign:int}
      */
     private function findOwnTask(\PDO $db, int $id): array
     {
         $stmt = $db->prepare(
-            'SELECT t.id, t.title, t.assigned_member_id, t.due_date, t.is_done, t.done_at, t.done_by, t.auto_assign
-             FROM tasks t
-             JOIN task_lists tl ON tl.id = t.task_list_id
-             WHERE t.id = :id AND tl.family_id = :family_id'
+            'SELECT t.id, t.title, t.assigned_member_id, t.due_date, t.is_done, t.done_at, t.done_by,' . "\n" .
+            '       t.reward_points, t.auto_assign' . "\n" .
+            '  FROM tasks t' . "\n" .
+            '  JOIN task_lists tl ON tl.id = t.task_list_id' . "\n" .
+            ' WHERE t.id = :id AND tl.family_id = :family_id'
         );
         $stmt->execute(['id' => $id, 'family_id' => TenantContext::familyId()]);
         $task = $stmt->fetch();
