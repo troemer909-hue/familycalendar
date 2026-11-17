@@ -51,24 +51,27 @@ final class AlexaController
         }
         TenantContext::set((int) $account['user_id'], (int) $account['family_id'], (int) $account['member_id'], (string) $account['role']);
 
-        $intent = $payload['request']['intent'] ?? [];
-        $name = (string) ($intent['name'] ?? '');
-        $slots = is_array($intent['slots'] ?? null) ? $intent['slots'] : [];
-        if ($name === 'AddEventIntent') {
-            $this->addEvent($intent, $slots);
+        $intentData = is_array($payload['request']['intent'] ?? null) ? $payload['request']['intent'] : [];
+        $intentName = (string) ($intentData['name'] ?? '');
+        $slots = is_array($intentData['slots'] ?? null) ? $intentData['slots'] : [];
+        if (in_array($intentName, ['AddTaskIntent', 'CompleteTaskIntent', 'GetDueTasksIntent'], true)) {
+            Response::json((new AlexaTaskIntentHandler())->handle($intentData));
         }
-        if ($name === 'DeleteEventIntent') {
-            $this->deleteEvent($intent, $slots);
+        if ($intentName === 'AddEventIntent') {
+            $this->addEvent($intentData, $slots);
+        }
+        if ($intentName === 'DeleteEventIntent') {
+            $this->deleteEvent($intentData, $slots);
         }
 
         $today = new \DateTimeImmutable('today');
-        if ($name === 'GetTodayEventsIntent') {
+        if ($intentName === 'GetTodayEventsIntent') {
             $from = $to = $today->format('Y-m-d');
             $period = 'today';
-        } elseif ($name === 'GetTomorrowEventsIntent') {
+        } elseif ($intentName === 'GetTomorrowEventsIntent') {
             $from = $to = $today->modify('+1 day')->format('Y-m-d');
             $period = 'tomorrow';
-        } elseif ($name === 'GetNextEventIntent') {
+        } elseif ($intentName === 'GetNextEventIntent') {
             $from = $today->format('Y-m-d');
             $to = $today->modify('+365 days')->format('Y-m-d');
             $period = 'next';

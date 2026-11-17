@@ -697,3 +697,11 @@ zugeordnet. Beim Löschen werden nur eigene Termine angezeigt (Familienadmins
 können alle Termine der Familie löschen). Mehrere passende Titel führen zu
 einer Rückfrage nach Datum und nötigenfalls Uhrzeit; Alexa löscht nie eine
 mehrdeutige Auswahl automatisch.
+
+Der Alexa-Webhook unterstützt außerdem Aufgaben-Intents zum Anlegen,
+Abhaken und Vorlesen der heute fälligen offenen Aufgaben. Beim Anlegen wird
+die einzige Aufgabenliste automatisch verwendet; bei mehreren Listen fragt
+Alexa nach der Liste. Beim Abhaken wird eine Aufgabe nur dann markiert, wenn
+Titel und optionale Listen-/Fälligkeitsangaben genau einen offenen Treffer
+ergeben. Fällige Aufgaben werden über den bestehenden `dueTasks()`-Endpunkt
+familienweit gelesen.
