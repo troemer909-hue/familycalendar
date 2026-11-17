@@ -35,6 +35,9 @@ final class AlexaController
         TenantContext::set((int) $account['user_id'], (int) $account['family_id'], (int) $account['member_id'], (string) $account['role']);
 
         $intent = (string) ($payload['request']['intent']['name'] ?? '');
+        if (in_array($intent, ['FlagLowStockIntent', 'ReadLowStockItemsIntent'], true)) {
+            $this->handleStockIntent($intent, $payload['request']['intent']['slots'] ?? []);
+        }
         $today = new \DateTimeImmutable('today');
         if ($intent === 'GetTodayEventsIntent') { $from = $to = $today->format('Y-m-d'); $period = 'today'; }
         elseif ($intent === 'GetTomorrowEventsIntent') { $from = $to = $today->modify('+1 day')->format('Y-m-d'); $period = 'tomorrow'; }
@@ -59,6 +62,75 @@ final class AlexaController
                 if ($total > count($events)) $text .= ' Und ' . ($total - count($events)) . ' weitere.';
             }
         }
+        Response::json(['version' => '1.0', 'response' => ['outputSpeech' => ['type' => 'PlainText', 'text' => $text], 'shouldEndSession' => true]]);
+    }
+
+    /** @param array<string,mixed> $slots */
+    public function dispatchVerifiedStockIntent(string $intent, array $slots = []): never
+    {
+        // Only called after signature, skill ID, access token, and tenant validation in handle().
+        if (!in_array($intent, ['FlagLowStockIntent', 'ReadLowStockItemsIntent'], true)) $this->respondError(400);
+        $this->handleStockIntent($intent, $slots);
+    }
+
+    /** @param array<string,mixed> $slots */
+    private function handleStockIntent(string $intent, array $slots): never
+    {
+        $controller = new HouseholdStockController();
+        if ($intent === 'ReadLowStockItemsIntent') {
+            $items = $this->callStockController($controller, 'index', new Request('GET', '/api/household-stock'));
+            $low = array_values(array_filter($items, static fn(array $entry): bool => $entry['low_stock']));
+            if (!$low) $this->sayAlexa('Aktuell wird kein Vorratsartikel knapp.');
+            $this->sayAlexa('Knapp werden: ' . implode(', ', array_column($low, 'label')) . '.');
+        }
+
+        $spoken = trim((string) ($slots['item']['value'] ?? ''));
+        if ($spoken === '') {
+            Response::json(['version' => '1.0', 'response' => [
+                'outputSpeech' => ['type' => 'PlainText', 'text' => 'Welcher Vorratsartikel wird knapp?'],
+                'directives' => [['type' => 'Dialog.ElicitSlot', 'slotToElicit' => 'item', 'updatedIntent' => ['name' => $intent, 'slots' => $slots]]],
+                'shouldEndSession' => false,
+            ]]);
+        }
+        $items = $this->callStockController($controller, 'index', new Request('GET', '/api/household-stock'));
+        $matches = $this->matchStockItems($spoken, $items);
+        if (count($matches) > 1) $this->sayAlexa('Meinst du ' . implode(' oder ', array_map(static fn(array $entry): string => '„' . $entry['label'] . '“', $matches)) . '?');
+        if (!$matches) $this->sayAlexa('Ich kenne keinen Vorratsartikel namens „' . $spoken . '“.');
+
+        $match = $matches[0];
+        if ($match['low_stock']) $this->sayAlexa($match['label'] . ' ist schon als knapp markiert.');
+        $request = new Request('POST', '/api/household-stock/' . $match['id'] . '/flag-low');
+        $request->params['id'] = (string) $match['id'];
+        $this->callStockController($controller, 'flagLow', $request);
+        $this->sayAlexa('Ich habe ' . $match['label'] . ' als knapp markiert und auf die Einkaufsliste gesetzt.');
+    }
+
+    /** @param array<int,array<string,mixed>> $items @return array<int,array<string,mixed>> */
+    private function matchStockItems(string $spoken, array $items): array
+    {
+        $normalize = static fn(string $value): string => trim((string) preg_replace('/[^\p{L}\p{N}]+/u', ' ', mb_strtolower(trim($value))));
+        $needle = $normalize($spoken);
+        if ($needle === '') return [];
+        $matches = [];
+        foreach ($items as $entry) {
+            $label = $normalize((string) $entry['label']);
+            similar_text($needle, $label, $similarity);
+            if (str_contains($label, $needle) || str_contains($needle, $label) || $similarity >= 70) $matches[] = $entry;
+        }
+        return $matches;
+    }
+
+    private function callStockController(HouseholdStockController $controller, string $method, Request $request): mixed
+    {
+        Response::enableCapture();
+        try { $controller->{$method}($request); }
+        catch (ResponseCaptured $response) { return $response->data; }
+        finally { Response::disableCapture(); }
+        return null;
+    }
+
+    private function sayAlexa(string $text): never
+    {
         Response::json(['version' => '1.0', 'response' => ['outputSpeech' => ['type' => 'PlainText', 'text' => $text], 'shouldEndSession' => true]]);
     }
 
