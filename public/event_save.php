@@ -44,18 +44,23 @@ $payload = [
 // Serie) - bei $id (Bearbeiten) wird recurrence_rule absichtlich gar nicht
 // mitgeschickt, damit EventController::update() sie unangetastet lässt.
 if (!$id) {
-    $freqMap = ['daily' => 'DAILY', 'weekly' => 'WEEKLY', 'monthly' => 'MONTHLY', 'yearly' => 'YEARLY'];
+    // "biweekly" (alle 2 Wochen) ist kein eigenes RRULE-FREQ, sondern
+    // FREQ=WEEKLY mit INTERVAL=2 - siehe RRule::expand().
+    $freqMap = ['daily' => 'DAILY', 'weekly' => 'WEEKLY', 'biweekly' => 'WEEKLY', 'monthly' => 'MONTHLY', 'yearly' => 'YEARLY'];
+    $intervalMap = ['biweekly' => 2];
     $repeatFreq = $_POST['repeat_freq'] ?? 'none';
 
     if ($repeatFreq !== 'none' && isset($freqMap[$repeatFreq])) {
         $endType = $_POST['repeat_end_type'] ?? 'count';
+        $interval = $intervalMap[$repeatFreq] ?? 1;
+        $intervalPart = $interval > 1 ? ";INTERVAL={$interval}" : '';
 
         if ($endType === 'until' && !empty($_POST['repeat_until'])) {
             $until = str_replace('-', '', $_POST['repeat_until']); // YYYY-MM-DD -> YYYYMMDD
-            $payload['recurrence_rule'] = "FREQ={$freqMap[$repeatFreq]};UNTIL={$until}";
+            $payload['recurrence_rule'] = "FREQ={$freqMap[$repeatFreq]}{$intervalPart};UNTIL={$until}";
         } else {
             $count = max(1, min(366, (int) ($_POST['repeat_count'] ?? 12)));
-            $payload['recurrence_rule'] = "FREQ={$freqMap[$repeatFreq]};COUNT={$count}";
+            $payload['recurrence_rule'] = "FREQ={$freqMap[$repeatFreq]}{$intervalPart};COUNT={$count}";
         }
     }
 
