@@ -300,6 +300,115 @@ final class TaskAssignmentPoolTest extends TestCase
         }
     }
 
+    public function testFixedOrderPoolStoresAndReturnsPositionsInOrder(): void
+    {
+        $client = $this->loggedInClient();
+        $list = $client->request('POST', '/api/task-lists', ['name' => 'Haushalt']);
+        $listId = $list['data']['id'];
+        $anna = $this->addProfile($client, 'Anna');
+        $max = $this->addProfile($client, 'Max');
+        $lea = $this->addProfile($client, 'Lea');
+
+        $save = $client->request('PUT', "/api/task-lists/{$listId}/assignment-pool", [
+            'members' => [
+                ['family_member_id' => $anna, 'position' => 2],
+                ['family_member_id' => $max, 'position' => 0],
+                ['family_member_id' => $lea, 'position' => 1],
+            ],
+            'rhythm' => 'weekly',
+            'mode' => 'fixed_order',
+        ]);
+        self::assertTrue($save['ok'], json_encode($save));
+
+        $pool = $client->request('GET', "/api/task-lists/{$listId}/assignment-pool")['data'];
+        self::assertSame('fixed_order', $pool['mode']);
+        self::assertSame(
+            [$max, $lea, $anna],
+            array_column($pool['members'], 'family_member_id'),
+            'Mitglieder müssen nach position sortiert zurückgegeben werden.'
+        );
+        self::assertSame([0, 1, 2], array_column($pool['members'], 'position'), 'Positionen werden auf 0..n-1 normalisiert.');
+    }
+
+    public function testFixedOrderPoolWithoutExplicitPositionsUsesInputOrder(): void
+    {
+        $client = $this->loggedInClient();
+        $list = $client->request('POST', '/api/task-lists', ['name' => 'Haushalt']);
+        $listId = $list['data']['id'];
+        $anna = $this->addProfile($client, 'Anna');
+        $max = $this->addProfile($client, 'Max');
+
+        $client->request('PUT', "/api/task-lists/{$listId}/assignment-pool", [
+            'members' => [
+                ['family_member_id' => $anna],
+                ['family_member_id' => $max],
+            ],
+            'rhythm' => 'weekly',
+            'mode' => 'fixed_order',
+        ]);
+
+        $pool = $client->request('GET', "/api/task-lists/{$listId}/assignment-pool")['data'];
+        self::assertSame([$anna, $max], array_column($pool['members'], 'family_member_id'));
+        self::assertSame([0, 1], array_column($pool['members'], 'position'));
+    }
+
+    public function testInvalidModeIsRejected(): void
+    {
+        $client = $this->loggedInClient();
+        $list = $client->request('POST', '/api/task-lists', ['name' => 'Haushalt']);
+        $listId = $list['data']['id'];
+        $anna = $this->addProfile($client, 'Anna');
+
+        $res = $client->request('PUT', "/api/task-lists/{$listId}/assignment-pool", [
+            'members' => [['family_member_id' => $anna]],
+            'rhythm' => 'weekly',
+            'mode' => 'alphabetical',
+        ]);
+
+        self::assertFalse($res['ok']);
+        self::assertSame(422, $res['status']);
+    }
+
+    public function testRunDuePoolsWithFixedOrderCyclesThroughMembersByPosition(): void
+    {
+        $client = $this->loggedInClient();
+        $list = $client->request('POST', '/api/task-lists', ['name' => 'Haushalt']);
+        $listId = $list['data']['id'];
+        $anna = $this->addProfile($client, 'Anna');
+        $max = $this->addProfile($client, 'Max');
+
+        $task1 = $client->request('POST', "/api/task-lists/{$listId}/tasks", ['title' => 'Spülmaschine']);
+        $task2 = $client->request('POST', "/api/task-lists/{$listId}/tasks", ['title' => 'Mülltonne']);
+
+        $client->request('PUT', "/api/task-lists/{$listId}/assignment-pool", [
+            'members' => [
+                ['family_member_id' => $anna, 'position' => 0],
+                ['family_member_id' => $max, 'position' => 1],
+            ],
+            'rhythm' => 'daily',
+            'mode' => 'fixed_order',
+        ]);
+
+        TaskAssignmentRunner::runDuePools($this->db);
+        $afterFirstDraw = $client->request('GET', "/api/task-lists/{$listId}/tasks")['data'];
+        $assignedByFirstDraw = [];
+        foreach ($afterFirstDraw as $t) {
+            $assignedByFirstDraw[$t['id']] = $t['assigned_member_id'];
+        }
+        self::assertSame($anna, $assignedByFirstDraw[$task1['data']['id']], 'Ohne vorherige Zuweisung startet die Rotation bei Position 0 (Anna).');
+        self::assertSame($anna, $assignedByFirstDraw[$task2['data']['id']]);
+
+        // next_draw_at direkt wieder auf heute setzen, um einen zweiten Zug ohne Wartezeit zu erzwingen.
+        $this->db->prepare('UPDATE task_assignment_pools SET next_draw_at = CURDATE() WHERE task_list_id = :list_id')
+            ->execute(['list_id' => $listId]);
+
+        TaskAssignmentRunner::runDuePools($this->db);
+        $afterSecondDraw = $client->request('GET', "/api/task-lists/{$listId}/tasks")['data'];
+        foreach ($afterSecondDraw as $t) {
+            self::assertSame($max, $t['assigned_member_id'], 'Nach Anna (Position 0) ist beim zweiten Zug jede Aufgabe bei Max (Position 1).');
+        }
+    }
+
     public function testRunDuePoolsIgnoresInactivePools(): void
     {
         $client = $this->loggedInClient();
