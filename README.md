@@ -658,10 +658,11 @@ Für bereits bestehende Installationen: Migration
 `database/migrations/012_shorten_indexed_varchars.sql` einmalig
 ausführen.
 
-## Alexa Account Linking (Phase 1)
+## Alexa Account Linking und Lese-Intents (Phase 1/2)
 
 In der Alexa Developer Console zuerst einen Custom Skill anlegen und dessen
-Skill-ID als `ALEXA_CLIENT_ID` in `.env` eintragen. Falls die Console für
+Skill-ID als `ALEXA_CLIENT_ID` und `ALEXA_SKILL_ID` in `.env` eintragen
+(Client-ID für OAuth, Skill-ID für den Webhook). Falls die Console für
 Account Linking ein Client-Secret vorgibt, dieses zusätzlich als
 `ALEXA_CLIENT_SECRET` konfigurieren. In Alexa als Authorization URI
 `https://<deine-domain>/oauth/authorize` und als Token URI
@@ -675,3 +676,13 @@ Familien im Plus-Plan zustimmen. Access-Tokens laufen nach einer Stunde,
 Refresh-Tokens werden bei jeder Nutzung rotiert und verfallen spätestens nach
 90 Tagen. Die Verknüpfung kann unter Benachrichtigungseinstellungen widerrufen
 werden.
+
+Für den Skill-Endpunkt `/api/alexa/webhook` ist die HTTPS-URL der App als
+Alexa-Service-Endpunkt einzutragen. Das Interaktionsmodell liegt als
+versionierter Export unter `docs/alexa-interaction-model.json`. Der Webhook
+prüft vor Skill-ID, Account oder Intent die Amazon-Signatur, das
+Zertifikats-Hostname und die Request-Zeit (maximal 150 Sekunden Abweichung).
+Die unterstützten Intents lesen Termine für heute, morgen oder den nächsten
+Termin aus derselben Event-Abfrage wie die Web-API. Das Account-Linking-Token
+wird gehasht gegen `alexa_links` aufgelöst; fehlt eine gültige Verknüpfung,
+antwortet der Skill mit einer `LinkAccount`-Karte.

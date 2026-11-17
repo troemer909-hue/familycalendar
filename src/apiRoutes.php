@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Familienkalender\Controllers\AdminFamilyController;
 use Familienkalender\Controllers\AdminPlanController;
+use Familienkalender\Controllers\AlexaController;
 use Familienkalender\Controllers\AlexaOAuthController;
 use Familienkalender\Controllers\AuthController;
 use Familienkalender\Controllers\CalendarSourceController;
@@ -39,6 +40,9 @@ function buildApiRouter(): Router
     $alexaOAuth = new AlexaOAuthController();
     $router->get('/api/alexa/link', [$alexaOAuth, 'link'], [$authMiddleware]);
     $router->delete('/api/alexa/link', [$alexaOAuth, 'link'], [$authMiddleware]);
+
+    // -- Alexa Skill Webhook (Signaturprüfung erfolgt im Controller) ---------
+    $router->post('/api/alexa/webhook', [new AlexaController(), 'handle']);
 
     // -- Auth (öffentlich) --------------------------------------------------
     $auth = new AuthController();
