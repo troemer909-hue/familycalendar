@@ -35,6 +35,9 @@ final class AlexaController
         TenantContext::set((int) $account['user_id'], (int) $account['family_id'], (int) $account['member_id'], (string) $account['role']);
 
         $intent = (string) ($payload['request']['intent']['name'] ?? '');
+        if (in_array($intent, ['AddShoppingItemIntent', 'CheckShoppingItemIntent', 'ReadShoppingListIntent', 'ClearCheckedShoppingItemsIntent'], true)) {
+            $this->handleShoppingIntent($intent, $payload['request']['intent']['slots'] ?? []);
+        }
         $today = new \DateTimeImmutable('today');
         if ($intent === 'GetTodayEventsIntent') { $from = $to = $today->format('Y-m-d'); $period = 'today'; }
         elseif ($intent === 'GetTomorrowEventsIntent') { $from = $to = $today->modify('+1 day')->format('Y-m-d'); $period = 'tomorrow'; }
@@ -59,6 +62,89 @@ final class AlexaController
                 if ($total > count($events)) $text .= ' Und ' . ($total - count($events)) . ' weitere.';
             }
         }
+        Response::json(['version' => '1.0', 'response' => ['outputSpeech' => ['type' => 'PlainText', 'text' => $text], 'shouldEndSession' => true]]);
+    }
+
+    /** @param array<string,mixed> $slots */
+    private function handleShoppingIntent(string $intent, array $slots): never
+    {
+        $controller = new ShoppingListController();
+        if ($intent === 'AddShoppingItemIntent') {
+            $item = trim((string) ($slots['item']['value'] ?? ''));
+            if ($item === '') {
+                Response::json(['version' => '1.0', 'response' => [
+                    'outputSpeech' => ['type' => 'PlainText', 'text' => 'Was soll ich hinzufügen?'],
+                    'directives' => [['type' => 'Dialog.ElicitSlot', 'slotToElicit' => 'item', 'updatedIntent' => ['name' => $intent, 'slots' => $slots]]],
+                    'shouldEndSession' => false,
+                ]]);
+            }
+            $this->callShoppingController($controller, 'create', new Request('POST', '/api/shopping-list', [], ['label' => $item]));
+            $this->say('Ich habe ' . $item . ' zur Einkaufsliste hinzugefügt.');
+        }
+
+        if ($intent === 'CheckShoppingItemIntent') {
+            $item = trim((string) ($slots['item']['value'] ?? ''));
+            if ($item === '') $this->say('Welchen Artikel soll ich abhaken?');
+            $items = $this->callShoppingController($controller, 'index', new Request('GET', '/api/shopping-list'));
+            $open = array_values(array_filter($items, static fn(array $entry): bool => !$entry['checked']));
+            $matches = $this->matchShoppingItems($item, $open);
+            if (count($matches) === 1) {
+                $request = new Request('PUT', '/api/shopping-list/' . $matches[0]['id'], [], ['checked' => true]);
+                $request->params['id'] = (string) $matches[0]['id'];
+                $this->callShoppingController($controller, 'update', $request);
+                $this->say($matches[0]['label'] . ' ist abgehakt.');
+            }
+            if (count($matches) > 1) $this->say('Meinst du ' . implode(' oder ', array_map(static fn(array $entry): string => '„' . $entry['label'] . '“', $matches)) . '?');
+            $this->say('Ich finde „' . $item . '“ nicht auf der Einkaufsliste.');
+        }
+
+        if ($intent === 'ReadShoppingListIntent') {
+            $items = $this->callShoppingController($controller, 'index', new Request('GET', '/api/shopping-list'));
+            $open = array_values(array_filter($items, static fn(array $entry): bool => !$entry['checked']));
+            if (!$open) $this->say('Deine Einkaufsliste ist leer.');
+            $limit = 10;
+            $text = 'Auf deiner Einkaufsliste stehen: ' . implode(', ', array_column(array_slice($open, 0, $limit), 'label'));
+            if (count($open) > $limit) $text .= ' und ' . (count($open) - $limit) . ' weitere';
+            $this->say($text . '.');
+        }
+
+        if ($intent === 'ClearCheckedShoppingItemsIntent') {
+            $this->callShoppingController($controller, 'clearChecked', new Request('POST', '/api/shopping-list/clear-checked'));
+            $this->say('Die abgehakten Artikel wurden von der Einkaufsliste entfernt.');
+        }
+        $this->respondError(400);
+    }
+
+    /** @param array<int,array<string,mixed>> $items @return array<int,array<string,mixed>> */
+    private function matchShoppingItems(string $spoken, array $items): array
+    {
+        $normalize = static function (string $value): string {
+            $value = mb_strtolower(trim($value));
+            return trim((string) preg_replace('/[^\p{L}\p{N}]+/u', ' ', $value));
+        };
+        $needle = $normalize($spoken);
+        if ($needle === '') return [];
+        $matches = [];
+        foreach ($items as $entry) {
+            $label = $normalize((string) $entry['label']);
+            similar_text($needle, $label, $similarity);
+            if (str_contains($label, $needle) || str_contains($needle, $label) || $similarity >= 70) $matches[] = $entry;
+        }
+        return $matches;
+    }
+
+    /** Invoke an existing endpoint and return its captured JSON response. */
+    private function callShoppingController(ShoppingListController $controller, string $method, Request $request): mixed
+    {
+        Response::enableCapture();
+        try { $controller->{$method}($request); }
+        catch (ResponseCaptured $response) { return $response->data; }
+        finally { Response::disableCapture(); }
+        return null;
+    }
+
+    private function say(string $text): never
+    {
         Response::json(['version' => '1.0', 'response' => ['outputSpeech' => ['type' => 'PlainText', 'text' => $text], 'shouldEndSession' => true]]);
     }
 

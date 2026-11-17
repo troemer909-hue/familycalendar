@@ -18,6 +18,26 @@
           "slots": [],
           "samples": ["wann ist mein nächster termin", "was ist mein nächster termin", "wann habe ich den nächsten termin", "nenne meinen nächsten termin"]
         },
+        {
+          "name": "AddShoppingItemIntent",
+          "slots": [{ "name": "item", "type": "AMAZON.SearchQuery" }],
+          "samples": ["füge {item} zur einkaufsliste hinzu", "setz {item} auf die einkaufsliste", "ich brauche {item}"]
+        },
+        {
+          "name": "CheckShoppingItemIntent",
+          "slots": [{ "name": "item", "type": "AMAZON.SearchQuery" }],
+          "samples": ["hak {item} auf der einkaufsliste ab", "ich habe {item} eingekauft", "markiere {item} als erledigt"]
+        },
+        {
+          "name": "ReadShoppingListIntent",
+          "slots": [],
+          "samples": ["was steht auf der einkaufsliste", "lies meine einkaufsliste vor", "was muss ich einkaufen"]
+        },
+        {
+          "name": "ClearCheckedShoppingItemsIntent",
+          "slots": [],
+          "samples": ["leer die einkaufsliste", "entferne die abgehakten artikel", "räume die erledigten einkäufe weg"]
+        },
         { "name": "AMAZON.HelpIntent", "slots": [], "samples": [] },
         { "name": "AMAZON.CancelIntent", "slots": [], "samples": [] },
         { "name": "AMAZON.StopIntent", "slots": [], "samples": [] },
