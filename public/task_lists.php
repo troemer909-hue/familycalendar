@@ -174,7 +174,7 @@ $openListId = (int) ($_GET['open'] ?? 0);
               <summary class="btn btn-secondary" style="display:inline-block;cursor:pointer;">Zufalls-Zuteilung <?= $pool ? 'bearbeiten' : 'einrichten' ?></summary>
               <div style="margin-top:10px;">
                 <p class="hint-text">
-                  Verlost jede Aufgabe dieser Liste im gewählten Rhythmus unabhängig neu an eine Person aus dem Kreis unten - keine manuelle Zuweisung mehr nötig, auch bei mehreren Kindern nicht fair verhandelbar.
+                  Teilt jede Aufgabe dieser Liste im gewählten Rhythmus unabhängig neu an eine Person aus dem Kreis unten zu.
                   <?php if ($pool): ?>
                     Nächste Ziehung: <?= h(formatGermanDate($pool['next_draw_at'])) ?><?= $pool['active'] ? '' : ' (Automatik aktuell deaktiviert)' ?>.
                   <?php endif; ?>
@@ -183,7 +183,7 @@ $openListId = (int) ($_GET['open'] ?? 0);
                   <?= csrfField() ?>
                   <input type="hidden" name="list_id" value="<?= $listId ?>" />
                   <label>Personen im Los-Kreis (mit optionaler Obergrenze pro Ziehung)</label>
-                  <?php foreach ($members as $m):
+                  <?php foreach ($members as $memberIndex => $m):
                     $existingMember = null;
                     foreach (($pool['members'] ?? []) as $pm) {
                         if ($pm['family_member_id'] === (int) $m['id']) {
@@ -197,7 +197,8 @@ $openListId = (int) ($_GET['open'] ?? 0);
                         <input type="checkbox" name="member_ids[]" value="<?= (int) $m['id'] ?>"<?= $existingMember ? ' checked' : '' ?> />
                         <?= h($m['display_name']) ?>
                       </label>
-                      <input type="number" name="max_tasks[<?= (int) $m['id'] ?>]" min="1" placeholder="unbegrenzt" style="width:120px;" value="<?= $existingMember && $existingMember['max_tasks'] !== null ? (int) $existingMember['max_tasks'] : '' ?>" />
+                      <input type="number" name="max_tasks[<?= (int) $m['id'] ?>]" min="1" placeholder="unbegrenzt" title="Maximale Aufgaben pro Ziehung" style="width:120px;" value="<?= $existingMember && $existingMember['max_tasks'] !== null ? (int) $existingMember['max_tasks'] : '' ?>" />
+                      <input type="number" name="position[<?= (int) $m['id'] ?>]" min="1" title="Reihenfolge (nur bei fester Reihenfolge)" aria-label="Reihenfolge für <?= h($m['display_name']) ?>" style="width:76px;" value="<?= $existingMember ? ((int) $existingMember['position'] + 1) : ($memberIndex + 1) ?>" />
                     </div>
                   <?php endforeach; ?>
                   <label>Rhythmus</label>
@@ -212,6 +213,9 @@ $openListId = (int) ($_GET['open'] ?? 0);
                   </div>
                   <div class="row" style="align-items:center;">
                     <label class="checkbox-label"><input type="radio" name="mode" value="random"<?= ($pool['mode'] ?? '') === 'random' ? ' checked' : '' ?> /> Zufall (auch mehrfach hintereinander möglich)</label>
+                  </div>
+                  <div class="row" style="align-items:center;">
+                    <label class="checkbox-label"><input type="radio" name="mode" value="fixed_order"<?= ($pool['mode'] ?? '') === 'fixed_order' ? ' checked' : '' ?> /> Feste Reihenfolge (Nummern oben; pro Aufgabe reihum)</label>
                   </div>
                   <label class="checkbox-label" style="margin-top:10px;">
                     <input type="checkbox" name="active" value="1"<?= ($pool['active'] ?? true) ? ' checked' : '' ?> /> Automatik aktiv
