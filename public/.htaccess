@@ -15,6 +15,9 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^api/(.*)$ api.php [QSA,L]
 
+# Alexa Account Linking OAuth endpoints.
+RewriteRule ^oauth/(authorize|token)/?$ oauth.php [QSA,L]
+
 # Statische Assets (CSS, Icons, Service Worker, Manifest) ändern sich nur
 # bei einem Deploy/Self-Update, nicht zwischen zwei Seitenaufrufen - ohne
 # Cache-Header fragt der Browser bei JEDEM Seitenaufruf erneut danach statt

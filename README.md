@@ -657,3 +657,21 @@ ohnehin auf 254 Zeichen begrenzt, 191 reicht in der Praxis immer.
 Für bereits bestehende Installationen: Migration
 `database/migrations/012_shorten_indexed_varchars.sql` einmalig
 ausführen.
+
+## Alexa Account Linking (Phase 1)
+
+In der Alexa Developer Console zuerst einen Custom Skill anlegen und dessen
+Skill-ID als `ALEXA_CLIENT_ID` in `.env` eintragen. Falls die Console für
+Account Linking ein Client-Secret vorgibt, dieses zusätzlich als
+`ALEXA_CLIENT_SECRET` konfigurieren. In Alexa als Authorization URI
+`https://<deine-domain>/oauth/authorize` und als Token URI
+`https://<deine-domain>/oauth/token` eintragen; Grant Type ist Authorization
+Code. Anschließend `database/migrations/023_alexa_account_linking.sql` auf
+bestehenden Installationen anwenden (Neuinstallationen erhalten die Tabellen
+über `database/schema.sql`).
+
+Die Anmeldung verwendet das Family-Kalender-Konto des Nutzers und lässt nur
+Familien im Plus-Plan zustimmen. Access-Tokens laufen nach einer Stunde,
+Refresh-Tokens werden bei jeder Nutzung rotiert und verfallen spätestens nach
+90 Tagen. Die Verknüpfung kann unter Benachrichtigungseinstellungen widerrufen
+werden.

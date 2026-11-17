@@ -14,6 +14,9 @@ $prefs = $prefsRes['ok'] ? $prefsRes['data'] : [
     'reminder_default_minutes' => 30,
 ];
 $prefsError = $prefsRes['ok'] ? null : ($prefsRes['data']['error'] ?? 'Einstellungen konnten nicht geladen werden.');
+$alexaRes = $client->request('GET', '/api/alexa/link');
+handleUnauthorized($alexaRes);
+$alexaLinked = $alexaRes['ok'] && !empty($alexaRes['data']['linked']);
 
 $saved = isset($_GET['saved']);
 $error = $_GET['error'] ?? null;
@@ -41,6 +44,15 @@ $error = $_GET['error'] ?? null;
     <?php if ($saved): ?><p class="success-box">Gespeichert.</p><?php endif; ?>
     <?php if ($error): ?><p class="error-box"><?= h($error) ?></p><?php endif; ?>
     <?php if ($prefsError): ?><p class="error-box"><?= h($prefsError) ?></p><?php endif; ?>
+
+    <h2 style="font-size:16px;margin-top:24px;">Alexa</h2>
+    <p class="hint-text"><?= $alexaLinked ? 'Dein Konto ist mit Alexa verknüpft.' : 'Dein Konto ist derzeit nicht mit Alexa verknüpft.' ?></p>
+    <?php if ($alexaLinked): ?>
+      <form method="post" action="alexa_unlink.php">
+        <?= csrfField() ?>
+        <button type="submit" class="btn btn-secondary">Alexa-Verknüpfung lösen</button>
+      </form>
+    <?php endif; ?>
 
     <form method="post" action="notification_settings_save.php">
       <?= csrfField() ?>

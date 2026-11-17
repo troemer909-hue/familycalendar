@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Familienkalender\Controllers\AdminFamilyController;
 use Familienkalender\Controllers\AdminPlanController;
+use Familienkalender\Controllers\AlexaOAuthController;
 use Familienkalender\Controllers\AuthController;
 use Familienkalender\Controllers\CalendarSourceController;
 use Familienkalender\Controllers\CategoryController;
@@ -34,6 +35,10 @@ function buildApiRouter(): Router
 {
     $router = new Router();
     $authMiddleware = new AuthMiddleware();
+
+    $alexaOAuth = new AlexaOAuthController();
+    $router->get('/api/alexa/link', [$alexaOAuth, 'link'], [$authMiddleware]);
+    $router->delete('/api/alexa/link', [$alexaOAuth, 'link'], [$authMiddleware]);
 
     // -- Auth (öffentlich) --------------------------------------------------
     $auth = new AuthController();

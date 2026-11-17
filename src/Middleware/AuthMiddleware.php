@@ -25,7 +25,9 @@ final class AuthMiddleware
         }
 
         $claims = Token::verify($token);
-        if (!$claims || !isset($claims['user_id'])) {
+        // OAuth-scoped Alexa credentials must never be accepted as full web
+        // session credentials by the calendar API.
+        if (!$claims || !isset($claims['user_id']) || (isset($claims['type']) && $claims['type'] !== 'web')) {
             Response::error('Token ungültig oder abgelaufen.', 401);
         }
 
