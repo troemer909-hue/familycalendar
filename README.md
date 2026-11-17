@@ -606,7 +606,7 @@ schnell unübersichtlich (einzelne Termine werden dort abgeschnitten).
 
 Für Aufgabenlisten (siehe `task_lists.php`) lässt sich pro Liste eine
 "Zufalls-Zuteilung" einrichten: ein Kreis an Personen + Rhythmus
-(täglich/wöchentlich/monatlich) + Modus (Zufall oder Fair). Jede Aufgabe
+(täglich/wöchentlich/monatlich) + Modus (Zufall, Fair oder feste Reihenfolge). Jede Aufgabe
 der Liste wird davon unabhängig per Los neu zugewiesen - praktisch, um
 in Familien mit mehreren Kindern Streit darüber zu vermeiden, wer welche
 Hausarbeit macht (siehe
@@ -616,6 +616,11 @@ Hausarbeit macht (siehe
   (solange eine andere Person noch Kapazität hat). **Zufall** lost ganz
   ohne diese Einschränkung, auch mehrfach hintereinander dieselbe Person
   möglich.
+- **Feste Reihenfolge** lässt jede Aufgabe einzeln zyklisch durch die
+  nummerierte Mitgliederreihenfolge rotieren. Mitglieder ohne freie
+  Kapazität werden übersprungen; nach dem letzten Eintrag geht es oben
+  weiter. Wird das zuletzt zuständige Mitglied aus dem Pool entfernt,
+  beginnt die Rotation beim ersten Eintrag.
 - **Maximalzahl pro Person** (optional): begrenzt, wie viele Aufgaben
   eine Person pro Ziehung höchstens bekommt. Ist die Gesamtkapazität
   aller Personen im Pool ausgeschöpft, bleiben restliche Aufgaben dieser

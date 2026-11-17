@@ -145,4 +145,90 @@ final class TaskAssignmentDrawTest extends TestCase
 
         self::assertSame([10 => null], $result);
     }
+
+    public function testFixedOrderAssignsEachTaskToTheMemberAfterItsLastAssignee(): void
+    {
+        $members = [
+            ['family_member_id' => 1, 'max_tasks' => null, 'position' => 0],
+            ['family_member_id' => 2, 'max_tasks' => null, 'position' => 1],
+            ['family_member_id' => 3, 'max_tasks' => null, 'position' => 2],
+        ];
+        $tasks = [
+            ['id' => 10, 'last_assigned_member_id' => 1],
+            ['id' => 11, 'last_assigned_member_id' => 3],
+            ['id' => 12, 'last_assigned_member_id' => null],
+        ];
+
+        $result = TaskAssignmentDraw::draw($members, $tasks, 'fixed_order');
+
+        self::assertSame(2, $result[10], 'Nach Person 1 (Position 0) ist Person 2 (Position 1) dran.');
+        self::assertSame(1, $result[11], 'Nach der letzten Position (2) geht es zyklisch wieder bei der ersten Position weiter.');
+        self::assertSame(1, $result[12], 'Ohne bisherige Zuweisung startet die Rotation bei der ersten Position.');
+    }
+
+    public function testFixedOrderIsDeterministicRegardlessOfInputMemberOrder(): void
+    {
+        $members = [
+            ['family_member_id' => 3, 'max_tasks' => null, 'position' => 2],
+            ['family_member_id' => 1, 'max_tasks' => null, 'position' => 0],
+            ['family_member_id' => 2, 'max_tasks' => null, 'position' => 1],
+        ];
+        $tasks = [['id' => 10, 'last_assigned_member_id' => 1]];
+
+        for ($i = 0; $i < 10; $i++) {
+            $result = TaskAssignmentDraw::draw($members, $tasks, 'fixed_order');
+            self::assertSame(2, $result[10], 'Reihenfolge richtet sich nach position, nicht nach der Reihenfolge im Eingabe-Array.');
+        }
+    }
+
+    public function testFixedOrderSkipsMembersWithoutCapacityButKeepsCycling(): void
+    {
+        $members = [
+            ['family_member_id' => 1, 'max_tasks' => null, 'position' => 0],
+            ['family_member_id' => 2, 'max_tasks' => 0, 'position' => 1],
+            ['family_member_id' => 3, 'max_tasks' => null, 'position' => 2],
+        ];
+        $tasks = [['id' => 10, 'last_assigned_member_id' => 1]];
+
+        $result = TaskAssignmentDraw::draw($members, $tasks, 'fixed_order');
+
+        self::assertSame(3, $result[10], 'Person 2 ist als nächstes dran, hat aber keine Kapazität mehr und wird übersprungen.');
+    }
+
+    public function testFixedOrderLeavesTaskUnassignedWhenEveryoneIsAtCapacity(): void
+    {
+        $members = [
+            ['family_member_id' => 1, 'max_tasks' => 0, 'position' => 0],
+            ['family_member_id' => 2, 'max_tasks' => 0, 'position' => 1],
+        ];
+        $tasks = [['id' => 10, 'last_assigned_member_id' => 1]];
+
+        $result = TaskAssignmentDraw::draw($members, $tasks, 'fixed_order');
+
+        self::assertNull($result[10]);
+    }
+
+    public function testFixedOrderRestartsAtFirstPositionWhenLastAssigneeLeftThePool(): void
+    {
+        $members = [
+            ['family_member_id' => 1, 'max_tasks' => null, 'position' => 0],
+            ['family_member_id' => 2, 'max_tasks' => null, 'position' => 1],
+        ];
+        // Person 3 (vormals im Pool) war zuletzt dran, ist aber inzwischen entfernt.
+        $tasks = [['id' => 10, 'last_assigned_member_id' => 3]];
+
+        $result = TaskAssignmentDraw::draw($members, $tasks, 'fixed_order');
+
+        self::assertSame(1, $result[10], 'Ist das zuletzt zuständige Mitglied nicht mehr im Pool, beginnt die Rotation wieder bei der ersten Position.');
+    }
+
+    public function testFixedOrderWithSingleMemberAlwaysAssignsThatMember(): void
+    {
+        $members = [['family_member_id' => 1, 'max_tasks' => null, 'position' => 0]];
+        $tasks = [['id' => 10, 'last_assigned_member_id' => 1]];
+
+        $result = TaskAssignmentDraw::draw($members, $tasks, 'fixed_order');
+
+        self::assertSame(1, $result[10]);
+    }
 }

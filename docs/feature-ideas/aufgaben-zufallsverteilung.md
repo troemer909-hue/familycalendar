@@ -3,7 +3,7 @@
 ## Problem / Motivation
 In Familien mit mehreren Kindern gibt es ständig Streit darüber, wer welche Aufgabe macht ("ich war letztes Mal dran", "das ist nicht fair"). Eine feste, manuell gepflegte Zuweisung wird schnell zur Diskussionsgrundlage selbst. Löst stattdessen eine Automatik per Los aus, wer eine Aufgabe übernimmt, entfällt die Diskussion - die App entscheidet, nicht die Eltern.
 
-Unterscheidet sich von der bereits dokumentierten `rotierende-aufgaben.md`: dort rotiert eine **einzelne** Aufgabe in **fester Reihenfolge** durch eine Personenliste. Hier geht es um eine ganze **Aufgabenliste mit mehreren, unterschiedlichen Aufgaben** (z.B. "Spülmaschine ausräumen", "Mülltonne rausstellen", "Tisch decken"), bei der **jede Aufgabe unabhängig per Zufall** (nicht in fester Reihenfolge) neu verlost wird. Beide Konzepte könnten später dieselbe UI-Sektion teilen, sind aber unterschiedliche Mechanismen und hier bewusst getrennt geplant.
+Issue #58 ergänzt diese bestehende Pool-Zuteilung um den Modus **Feste Reihenfolge**. Damit kann jede Aufgabe derselben Liste unabhängig durch die geordnete Mitgliederliste rotieren; eine separate Rotationsentität ist nicht nötig. Siehe auch `rotierende-aufgaben.md`.
 
 ## Zielgruppe & Nutzen
 Familien mit mehreren Kindern/mehreren Erwachsenen, die Haushaltsaufgaben fair und ohne wiederkehrende Diskussion verteilen wollen. Eine bestehende Aufgabenliste (siehe `todo-aufgabenliste.md`, bereits mit Vorlagen-Aufgaben befüllbar) bekommt eine "Los-Automatik": Pool an Personen + Rhythmus auswählen, danach läuft die Zuteilung von selbst.
@@ -12,14 +12,16 @@ Familien mit mehreren Kindern/mehreren Erwachsenen, die Haushaltsaufgaben fair u
 - Als Elternteil möchte ich eine Aufgabenliste mit festen Aufgaben anlegen und einen Kreis von Personen festlegen, aus dem jede Aufgabe automatisch im gewählten Rhythmus neu verlost wird.
 - Als Kind möchte ich sehen, wer gerade für welche Aufgabe eingeteilt ist, ohne dass das ein Elternteil manuell einträgt.
 - Als Elternteil möchte ich wählen können, ob es reiner Zufall ist (auch mehrfach hintereinander dieselbe Person möglich) oder ob die Automatik fair rotiert (wer dran war, ist beim nächsten Mal für dieselbe Aufgabe nicht sofort wieder dran).
+- Als Elternteil möchte ich eine feste Reihenfolge vorgeben, in der jede Aufgabe einzeln zyklisch weitergegeben wird.
 - Als Elternteil möchte ich eine einzelne Aufgabe aus der Automatik herausnehmen können (z.B. weil sie dauerhaft bei einer bestimmten Person bleiben soll), ohne die ganze Losliste zu deaktivieren.
 - Als Elternteil möchte ich pro Person eine Obergrenze festlegen, wie viele Aufgaben sie pro Zeitraum maximal bekommen soll - ist die Summe der Obergrenzen ausgeschöpft, bleiben übrige Aufgaben unzugeteilt und damit unerledigt, statt zwangsweise doch noch jemandem zugewiesen zu werden. Funktioniert dadurch auch mit nur einer einzigen Person im Pool (z.B. "maximal 3 von 5 Aufgaben pro Tag").
 
 ## Funktionsumfang (v1)
-- Eine bestehende Aufgabenliste (`task_lists`) bekommt optional einen **Zuteilungs-Pool**: frei auswählbare Teilmenge der Familienmitglieder + Rhythmus (täglich/wöchentlich/monatlich) + Modus (**Zufall** oder **Fair**, siehe unten).
+- Eine bestehende Aufgabenliste (`task_lists`) bekommt optional einen **Zuteilungs-Pool**: frei auswählbare Teilmenge der Familienmitglieder + Rhythmus (täglich/wöchentlich/monatlich) + Modus (**Zufall**, **Fair** oder **Feste Reihenfolge**, siehe unten).
 - Beim Erreichen des nächsten Intervalls (Cron-Job) wird für **jede Aufgabe dieser Liste unabhängig** ein neues Mitglied aus dem Pool gelost und `is_done` auf "offen" zurückgesetzt (neue Periode = frische Erledigung der Aufgabe).
 - **Zufallsmodus**: rein zufällige Ziehung aus dem Pool, auch mehrfach hintereinander dieselbe Person möglich.
 - **Fairnessmodus**: die Person, die eine Aufgabe zuletzt hatte, wird bei der nächsten Ziehung für genau diese Aufgabe ausgeschlossen (solange der Pool mindestens 2 Mitglieder hat) - verhindert "schon wieder ich".
+- **Feste Reihenfolge** (Issue #58): Mitglieder werden nach `position` sortiert. Jede Aufgabe nimmt die nächste Person nach ihrer letzten Zuweisung, zyklisch; eine neue oder nicht mehr im Pool vorhandene letzte Person beginnt beim ersten Platz. Mitglieder ohne freie Kapazität werden übersprungen.
 - Einzelne Aufgaben können von der Automatik ausgenommen werden (`auto_assign = 0`), bleiben dann bei ihrer manuell gesetzten Zuweisung.
 - **Maximalzahl pro Person** (optional, pro Pool-Mitglied einzeln einstellbar): begrenzt, wie viele Aufgaben eine Person pro Ziehung maximal bekommt. Ist die Kapazität aller Pool-Mitglieder zusammen ausgeschöpft, bleiben die restlichen Aufgaben dieser Ziehung **ohne Zuweisung** (`assigned_member_id = NULL`) und damit unerledigt - keine Person wird über ihre Obergrenze hinaus eingeteilt. Ohne gesetzte Obergrenze (Standard) ist eine Person unbegrenzt einteilbar, wie bisher geplant.
 - Push-Benachrichtigung an die neu eingeteilte Person bei jeder Änderung (keine Benachrichtigung, wenn dieselbe Person erneut dran ist, z.B. Pool-Größe 1, oder wenn eine Aufgabe mangels Kapazität unzugeteilt bleibt).
@@ -30,7 +32,7 @@ CREATE TABLE IF NOT EXISTS task_assignment_pools (
   id INT PRIMARY KEY AUTO_INCREMENT,
   task_list_id INT NOT NULL,
   rhythm ENUM('daily','weekly','monthly') NOT NULL,
-  mode ENUM('random','fair') NOT NULL DEFAULT 'fair',
+  mode ENUM('random','fair','fixed_order') NOT NULL DEFAULT 'fair',
   next_draw_at DATE NOT NULL,
   active TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -43,6 +45,7 @@ CREATE TABLE IF NOT EXISTS task_assignment_pool_members (
   pool_id INT NOT NULL,
   family_member_id INT NOT NULL,
   max_tasks INT NULL,                       -- NULL = unbegrenzt
+  position INT NOT NULL DEFAULT 0,           -- nur relevant für fixed_order
   FOREIGN KEY (pool_id) REFERENCES task_assignment_pools(id) ON DELETE CASCADE,
   FOREIGN KEY (family_member_id) REFERENCES family_members(id) ON DELETE CASCADE,
   UNIQUE KEY uniq_pool_member (pool_id, family_member_id)
@@ -57,7 +60,7 @@ CREATE TABLE IF NOT EXISTS task_assignment_pool_members (
 - Neuer Cron-Job `bin/draw-task-assignments.php` (Vorbild: `bin/sync-calendar-sources.php`): für jeden aktiven Pool mit `next_draw_at <= heute` werden die Aufgaben mit `auto_assign = 1` in zufälliger Reihenfolge einzeln verlost. Pro Aufgabe wird aus den Pool-Mitgliedern gezogen, die (a) im Fairnessmodus nicht die letzte Person dieser Aufgabe waren und (b) ihre `max_tasks`-Obergrenze in dieser Ziehung noch nicht erreicht haben (ein Zähler pro Mitglied wird während der Ziehung mitgeführt). Bleibt kein zulässiges Mitglied übrig, bekommt die Aufgabe `assigned_member_id = NULL` (unzugeteilt, siehe Maximalzahl-Funktion oben). Nach jeder Zuweisung: `is_done` zurückgesetzt, `next_draw_at` um den Rhythmus erhöht, Push an die neu eingeteilte Person (siehe `PushSender::sendToUser()`, bereits für Listen-Zuweisung aus PR #46 vorhanden) - keine Push bei unzugeteilten Aufgaben.
 
 ## UI/UX
-Erweiterung von `task_lists.php` (seit PR #51 zeigt jede Liste ihre Aufgaben direkt eingeklappt auf einer Seite) um eine weitere aufklappbare Sektion pro Liste: "Zufalls-Zuteilung einrichten" - Mitglieder-Checkboxen (je ausgewähltem Mitglied ein optionales Zahlenfeld "Maximal X Aufgaben pro Zeitraum, leer = unbegrenzt"), Rhythmus-Dropdown, Modus-Auswahl (Zufall/Fair), Aktiv-Schalter. Jede automatisch zugeteilte Aufgabe bekommt ein Badge "🎲 verlost" mit Tooltip, wann die nächste Neuziehung ansteht; eine Aufgabe ohne Zuweisung mangels Kapazität bekommt stattdessen "🎲 nicht zugeteilt (Kapazität voll)". Ein Klick/Checkbox erlaubt das Herausnehmen einer Aufgabe aus der Automatik (`auto_assign = 0`).
+Erweiterung von `task_lists.php` (seit PR #51 zeigt jede Liste ihre Aufgaben direkt eingeklappt auf einer Seite) um eine weitere aufklappbare Sektion pro Liste: "Zufalls-Zuteilung einrichten" - Mitglieder-Checkboxen (je ausgewähltem Mitglied ein optionales Zahlenfeld "Maximal X Aufgaben pro Zeitraum, leer = unbegrenzt"), Rhythmus-Dropdown, Modus-Auswahl (Zufall/Fair/Feste Reihenfolge), Positionsnummern bei fester Reihenfolge, Aktiv-Schalter. Jede automatisch zugeteilte Aufgabe bekommt ein Badge "🎲 verlost" mit Tooltip, wann die nächste Neuziehung ansteht; eine Aufgabe ohne Zuweisung mangels Kapazität bekommt stattdessen "🎲 nicht zugeteilt (Kapazität voll)". Ein Klick/Checkbox erlaubt das Herausnehmen einer Aufgabe aus der Automatik (`auto_assign = 0`).
 
 ## Abhängigkeiten & Integration
 Setzt `todo-aufgabenliste.md` voraus (gleiche `tasks`/`task_lists`-Tabellen) sowie die bestehende Push-Infrastruktur aus PR #46. Bewusst **kein** Aufbau auf der `recurrence_rule`-Materialisierung (RRule/`recurrence_parent_id`): die Aufgabe selbst bleibt als eine Zeile bestehen, nur Zuweisung und Erledigt-Status wechseln pro Periode - vermeidet eine wachsende Zahl neuer Task-Zeilen pro Zyklus, die inhaltlich dieselbe Aufgabe sind.
