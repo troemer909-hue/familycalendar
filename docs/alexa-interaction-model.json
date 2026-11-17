@@ -116,6 +116,16 @@
             "was muss ich heute erledigen",
             "lies meine fälligen aufgaben vor"
           ]
+        },
+        {
+          "name": "GetPointsBalanceIntent",
+          "slots": [],
+          "samples": [
+            "wie viele Punkte habe ich",
+            "wie ist mein Punktestand",
+            "wie viele Punkte habe ich gesammelt",
+            "wie viel Taschengeld habe ich"
+          ]
         }
       ],
       "types": []
