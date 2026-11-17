@@ -66,6 +66,9 @@ final class AlexaController
         if (in_array($intentName, ['AddShoppingItemIntent', 'CheckShoppingItemIntent', 'ReadShoppingListIntent', 'ClearCheckedShoppingItemsIntent'], true)) {
             $this->handleShoppingIntent($intentName, $slots);
         }
+        if (in_array($name, ['FlagLowStockIntent', 'ReadLowStockItemsIntent'], true)) {
+            $this->handleStockIntent($name, $slots);
+        }
 
         $today = new \DateTimeImmutable('today');
         if ($intentName === 'GetTodayEventsIntent') {
@@ -110,6 +113,52 @@ final class AlexaController
     }
 
     /** @param array<string,mixed> $slots */
+    private function handleStockIntent(string $intent, array $slots): never
+    {
+        $controller = new HouseholdStockController();
+        if ($intent === 'ReadLowStockItemsIntent') {
+            $items = $this->capture(static fn() => $controller->index(new Request('GET', '/api/household-stock')))['data'];
+            $low = array_values(array_filter($items, static fn(array $entry): bool => $entry['low_stock']));
+            if (!$low) $this->say('Aktuell wird kein Vorratsartikel knapp.');
+            $this->say('Knapp werden: ' . implode(', ', array_column($low, 'label')) . '.');
+        }
+
+        $spoken = trim((string) ($slots['item']['value'] ?? ''));
+        if ($spoken === '') {
+            Response::json(['version' => '1.0', 'response' => [
+                'outputSpeech' => ['type' => 'PlainText', 'text' => 'Welcher Vorratsartikel wird knapp?'],
+                'directives' => [['type' => 'Dialog.ElicitSlot', 'slotToElicit' => 'item', 'updatedIntent' => ['name' => $intent, 'slots' => $slots]]],
+                'shouldEndSession' => false,
+            ]]);
+        }
+        $items = $this->capture(static fn() => $controller->index(new Request('GET', '/api/household-stock')))['data'];
+        $matches = $this->matchStockItems($spoken, $items);
+        if (count($matches) > 1) $this->say('Meinst du ' . implode(' oder ', array_map(static fn(array $entry): string => '„' . $entry['label'] . '“', $matches)) . '?');
+        if (!$matches) $this->say('Ich kenne keinen Vorratsartikel namens „' . $spoken . '“.');
+
+        $match = $matches[0];
+        if ($match['low_stock']) $this->say($match['label'] . ' ist schon als knapp markiert.');
+        $request = new Request('POST', '/api/household-stock/' . $match['id'] . '/flag-low');
+        $request->params['id'] = (string) $match['id'];
+        $this->capture(static fn() => $controller->flagLow($request));
+        $this->say('Ich habe ' . $match['label'] . ' als knapp markiert und auf die Einkaufsliste gesetzt.');
+    }
+
+    /** @param array<int,array<string,mixed>> $items @return array<int,array<string,mixed>> */
+    private function matchStockItems(string $spoken, array $items): array
+    {
+        $normalize = static fn(string $value): string => trim((string) preg_replace('/[^\p{L}\p{N}]+/u', ' ', mb_strtolower(trim($value))));
+        $needle = $normalize($spoken);
+        if ($needle === '') return [];
+        $matches = [];
+        foreach ($items as $entry) {
+            $label = $normalize((string) $entry['label']);
+            similar_text($needle, $label, $similarity);
+            if (str_contains($label, $needle) || str_contains($needle, $label) || $similarity >= 70) $matches[] = $entry;
+        }
+        return $matches;
+    }
+
     private function handleShoppingIntent(string $intent, array $slots): never
     {
         $controller = new ShoppingListController();
