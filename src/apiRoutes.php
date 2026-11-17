@@ -19,6 +19,7 @@ use Familienkalender\Controllers\ReminderController;
 use Familienkalender\Controllers\HouseholdStockController;
 use Familienkalender\Controllers\SelfUpdateController;
 use Familienkalender\Controllers\ShoppingListController;
+use Familienkalender\Controllers\MealPlanController;
 use Familienkalender\Controllers\TaskListController;
 use Familienkalender\Core\Response;
 use Familienkalender\Core\Router;
@@ -109,6 +110,14 @@ function buildApiRouter(): Router
     $router->put('/api/shopping-list/{id}', [$shoppingList, 'update'], [$authMiddleware]);
     $router->delete('/api/shopping-list/{id}', [$shoppingList, 'destroy'], [$authMiddleware]);
     $router->post('/api/shopping-list/clear-checked', [$shoppingList, 'clearChecked'], [$authMiddleware]);
+
+    // -- Essensplan (geschützt, gemeinsam pro Familie) -----------------------
+    $mealPlan = new MealPlanController();
+    $router->get('/api/meal-plan', [$mealPlan, 'index'], [$authMiddleware]);
+    $router->post('/api/meal-plan', [$mealPlan, 'create'], [$authMiddleware]);
+    $router->put('/api/meal-plan/{id}', [$mealPlan, 'update'], [$authMiddleware]);
+    $router->delete('/api/meal-plan/{id}', [$mealPlan, 'destroy'], [$authMiddleware]);
+    $router->post('/api/meal-plan/{id}/add-to-shopping-list', [$mealPlan, 'addToShoppingList'], [$authMiddleware]);
 
     // -- Vorrat-Tracker (geschützt, schreibt in die Einkaufsliste oben) --
     $householdStock = new HouseholdStockController();
