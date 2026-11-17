@@ -66,8 +66,8 @@ final class AlexaController
         if (in_array($intentName, ['AddShoppingItemIntent', 'CheckShoppingItemIntent', 'ReadShoppingListIntent', 'ClearCheckedShoppingItemsIntent'], true)) {
             $this->handleShoppingIntent($intentName, $slots);
         }
-        if (in_array($name, ['FlagLowStockIntent', 'ReadLowStockItemsIntent'], true)) {
-            $this->handleStockIntent($name, $slots);
+        if (in_array($intentName, ['FlagLowStockIntent', 'ReadLowStockItemsIntent'], true)) {
+            $this->handleStockIntent($intentName, $slots);
         }
 
         $today = new \DateTimeImmutable('today');
