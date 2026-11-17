@@ -18,9 +18,14 @@ $members = $membersRes['ok'] ? $membersRes['data'] : [];
 // eine einzelne Liste wechseln zu müssen. Vorher lag das in
 // task_list_view.php, eine Klick-Ebene tiefer - wurde so nicht gefunden.
 $tasksByList = [];
+$poolByList = [];
+$rhythmLabels = ['daily' => 'Täglich', 'weekly' => 'Wöchentlich', 'monthly' => 'Monatlich'];
 foreach ($lists as $l) {
     $tasksRes = $client->request('GET', "/api/task-lists/{$l['id']}/tasks");
     $tasksByList[$l['id']] = $tasksRes['ok'] ? $tasksRes['data'] : [];
+
+    $poolRes = $client->request('GET', "/api/task-lists/{$l['id']}/assignment-pool");
+    $poolByList[$l['id']] = $poolRes['ok'] ? $poolRes['data'] : null;
 }
 
 $error = $_GET['error'] ?? null;
@@ -54,7 +59,7 @@ $openListId = (int) ($_GET['open'] ?? 0);
     <?php if (empty($lists)): ?>
       <p class="hint-text">Noch keine Aufgabenliste angelegt.</p>
     <?php else: ?>
-      <?php foreach ($lists as $l): $listId = (int) $l['id']; $tasks = $tasksByList[$listId]; ?>
+      <?php foreach ($lists as $l): $listId = (int) $l['id']; $tasks = $tasksByList[$listId]; $pool = $poolByList[$listId]; ?>
         <details id="list-<?= $listId ?>" class="task-list-details"<?= $openListId === $listId ? ' open' : '' ?>>
           <summary>
             <strong><?= h($l['name']) ?></strong>
@@ -81,6 +86,19 @@ $openListId = (int) ($_GET['open'] ?? 0);
                         <?php if ($t['assigned_member_name']): ?><?= h($t['assigned_member_name']) ?><?php endif; ?>
                         <?php if ($t['assigned_member_name'] && $t['due_date']): ?> · <?php endif; ?>
                         <?php if ($t['due_date']): ?>fällig <?= h(formatGermanDate($t['due_date'])) ?><?php endif; ?>
+                        <?php if ($pool && $pool['active'] && $t['auto_assign']): ?>
+                          <?php if ($t['assigned_member_name']): ?>
+                            · 🎲 verlost
+                          <?php else: ?>
+                            <?php /* Kann sowohl heißen "noch keine Ziehung gelaufen" als auch
+                                      "bei der letzten Ziehung mangels Kapazität nicht zugeteilt" -
+                                      beides lässt sich ohne zusätzliche Historie nicht
+                                      unterscheiden, deshalb bewusst neutral formuliert statt
+                                      "Kapazität voll" zu behaupten, wenn eventuell einfach
+                                      noch nie gezogen wurde. */ ?>
+                            · 🎲 noch nicht zugeteilt
+                          <?php endif; ?>
+                        <?php endif; ?>
                       </span>
                     </div>
                     <div style="display:flex;gap:8px;">
@@ -91,6 +109,15 @@ $openListId = (int) ($_GET['open'] ?? 0);
                         <input type="hidden" name="is_done" value="<?= $t['is_done'] ? '0' : '1' ?>" />
                         <button type="submit" class="btn btn-secondary"><?= $t['is_done'] ? 'Zurücksetzen' : 'Erledigt' ?></button>
                       </form>
+                      <?php if ($pool): ?>
+                        <form method="post" action="task_auto_assign_toggle.php" style="margin:0;">
+                          <?= csrfField() ?>
+                          <input type="hidden" name="id" value="<?= (int) $t['id'] ?>" />
+                          <input type="hidden" name="list_id" value="<?= $listId ?>" />
+                          <input type="hidden" name="auto_assign" value="<?= $t['auto_assign'] ? '0' : '1' ?>" />
+                          <button type="submit" class="btn btn-secondary" title="Aus der Zufalls-Zuteilung herausnehmen bzw. wieder aufnehmen"><?= $t['auto_assign'] ? 'Aus Losliste' : 'In Losliste' ?></button>
+                        </form>
+                      <?php endif; ?>
                       <form method="post" action="task_delete.php" style="margin:0;">
                         <?= csrfField() ?>
                         <input type="hidden" name="id" value="<?= (int) $t['id'] ?>" />
@@ -141,6 +168,66 @@ $openListId = (int) ($_GET['open'] ?? 0);
                   <button type="submit" class="btn btn-primary">Hinzufügen</button>
                 </div>
               </form>
+            </details>
+
+            <details style="margin-top:10px;">
+              <summary class="btn btn-secondary" style="display:inline-block;cursor:pointer;">Zufalls-Zuteilung <?= $pool ? 'bearbeiten' : 'einrichten' ?></summary>
+              <div style="margin-top:10px;">
+                <p class="hint-text">
+                  Verlost jede Aufgabe dieser Liste im gewählten Rhythmus unabhängig neu an eine Person aus dem Kreis unten - keine manuelle Zuweisung mehr nötig, auch bei mehreren Kindern nicht fair verhandelbar.
+                  <?php if ($pool): ?>
+                    Nächste Ziehung: <?= h(formatGermanDate($pool['next_draw_at'])) ?><?= $pool['active'] ? '' : ' (Automatik aktuell deaktiviert)' ?>.
+                  <?php endif; ?>
+                </p>
+                <form method="post" action="task_assignment_pool_save.php">
+                  <?= csrfField() ?>
+                  <input type="hidden" name="list_id" value="<?= $listId ?>" />
+                  <label>Personen im Los-Kreis (mit optionaler Obergrenze pro Ziehung)</label>
+                  <?php foreach ($members as $m):
+                    $existingMember = null;
+                    foreach (($pool['members'] ?? []) as $pm) {
+                        if ($pm['family_member_id'] === (int) $m['id']) {
+                            $existingMember = $pm;
+                            break;
+                        }
+                    }
+                  ?>
+                    <div class="row" style="align-items:center;gap:10px;">
+                      <label class="checkbox-label" style="flex:1;">
+                        <input type="checkbox" name="member_ids[]" value="<?= (int) $m['id'] ?>"<?= $existingMember ? ' checked' : '' ?> />
+                        <?= h($m['display_name']) ?>
+                      </label>
+                      <input type="number" name="max_tasks[<?= (int) $m['id'] ?>]" min="1" placeholder="unbegrenzt" style="width:120px;" value="<?= $existingMember && $existingMember['max_tasks'] !== null ? (int) $existingMember['max_tasks'] : '' ?>" />
+                    </div>
+                  <?php endforeach; ?>
+                  <label>Rhythmus</label>
+                  <select name="rhythm">
+                    <?php foreach ($rhythmLabels as $value => $label): ?>
+                      <option value="<?= $value ?>"<?= ($pool['rhythm'] ?? 'weekly') === $value ? ' selected' : '' ?>><?= h($label) ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                  <label>Modus</label>
+                  <div class="row" style="align-items:center;">
+                    <label class="checkbox-label"><input type="radio" name="mode" value="fair"<?= ($pool['mode'] ?? 'fair') === 'fair' ? ' checked' : '' ?> /> Fair (wer dran war, ist bei derselben Aufgabe nicht sofort wieder dran)</label>
+                  </div>
+                  <div class="row" style="align-items:center;">
+                    <label class="checkbox-label"><input type="radio" name="mode" value="random"<?= ($pool['mode'] ?? '') === 'random' ? ' checked' : '' ?> /> Zufall (auch mehrfach hintereinander möglich)</label>
+                  </div>
+                  <label class="checkbox-label" style="margin-top:10px;">
+                    <input type="checkbox" name="active" value="1"<?= ($pool['active'] ?? true) ? ' checked' : '' ?> /> Automatik aktiv
+                  </label>
+                  <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                  </div>
+                </form>
+                <?php if ($pool): ?>
+                  <form method="post" action="task_assignment_pool_delete.php" style="margin-top:10px;">
+                    <?= csrfField() ?>
+                    <input type="hidden" name="list_id" value="<?= $listId ?>" />
+                    <button type="submit" class="btn btn-danger">Zufalls-Zuteilung entfernen</button>
+                  </form>
+                <?php endif; ?>
+              </div>
             </details>
 
             <form method="post" action="task_list_delete.php" style="margin-top:16px;">

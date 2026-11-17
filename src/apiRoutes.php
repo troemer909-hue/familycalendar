@@ -87,6 +87,9 @@ function buildApiRouter(): Router
     $router->delete('/api/task-lists/{id}', [$taskLists, 'destroy'], [$authMiddleware]);
     $router->get('/api/task-lists/{id}/tasks', [$taskLists, 'tasks'], [$authMiddleware]);
     $router->post('/api/task-lists/{id}/tasks', [$taskLists, 'createTask'], [$authMiddleware]);
+    $router->get('/api/task-lists/{id}/assignment-pool', [$taskLists, 'getAssignmentPool'], [$authMiddleware]);
+    $router->put('/api/task-lists/{id}/assignment-pool', [$taskLists, 'putAssignmentPool'], [$authMiddleware]);
+    $router->delete('/api/task-lists/{id}/assignment-pool', [$taskLists, 'deleteAssignmentPool'], [$authMiddleware]);
     $router->put('/api/tasks/{id}', [$taskLists, 'updateTask'], [$authMiddleware]);
     $router->delete('/api/tasks/{id}', [$taskLists, 'deleteTask'], [$authMiddleware]);
 

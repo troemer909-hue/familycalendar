@@ -159,7 +159,7 @@ final class TaskListController
         $this->findOwnList($db, $listId);
 
         $stmt = $db->prepare(
-            'SELECT t.id, t.title, t.due_date, t.is_done, t.done_at, t.reward_points,
+            'SELECT t.id, t.title, t.due_date, t.is_done, t.done_at, t.reward_points, t.auto_assign,
                     t.assigned_member_id, fm.display_name AS assigned_member_name
              FROM tasks t
              LEFT JOIN family_members fm ON fm.id = t.assigned_member_id
@@ -176,6 +176,7 @@ final class TaskListController
             'reward_points' => $row['reward_points'] !== null ? (int) $row['reward_points'] : null,
             'assigned_member_id' => $row['assigned_member_id'] !== null ? (int) $row['assigned_member_id'] : null,
             'assigned_member_name' => $row['assigned_member_name'],
+            'auto_assign' => (bool) $row['auto_assign'],
         ], $stmt->fetchAll());
 
         Response::json($tasks);
@@ -285,13 +286,17 @@ final class TaskListController
         $isDone = $request->body['is_done'] ?? (bool) $task['is_done'];
         $isDone = (bool) $isDone;
 
+        $autoAssign = array_key_exists('auto_assign', $request->body)
+            ? (bool) $request->input('auto_assign')
+            : (bool) $task['auto_assign'];
+
         $doneAt = $isDone ? ($task['is_done'] ? $task['done_at'] : date('Y-m-d H:i:s')) : null;
         $doneBy = $isDone ? ($task['is_done'] ? $task['done_by'] : TenantContext::familyMemberId()) : null;
 
         $db->prepare(
             'UPDATE tasks
              SET title = :title, assigned_member_id = :assigned_member_id, due_date = :due_date,
-                 is_done = :is_done, done_at = :done_at, done_by = :done_by
+                 is_done = :is_done, done_at = :done_at, done_by = :done_by, auto_assign = :auto_assign
              WHERE id = :id'
         )->execute([
             'title' => $title,
@@ -300,6 +305,7 @@ final class TaskListController
             'is_done' => $isDone ? 1 : 0,
             'done_at' => $doneAt,
             'done_by' => $doneBy,
+            'auto_assign' => $autoAssign ? 1 : 0,
             'id' => $id,
         ]);
 
@@ -339,6 +345,170 @@ final class TaskListController
         Response::json(['status' => 'deleted']);
     }
 
+    /**
+     * GET /api/task-lists/{id}/assignment-pool
+     * Liefert die aktuelle Zufalls-Zuteilung einer Liste - null, falls
+     * keine eingerichtet ist (fürs Vorausfüllen des Einrichten-Formulars).
+     */
+    public function getAssignmentPool(Request $request): void
+    {
+        $db = Database::connection();
+        $listId = (int) $request->params['id'];
+        $this->findOwnList($db, $listId);
+
+        $pool = $this->findPool($db, $listId);
+        if (!$pool) {
+            Response::json(null);
+            return;
+        }
+
+        $membersStmt = $db->prepare(
+            'SELECT tapm.family_member_id, tapm.max_tasks, fm.display_name
+             FROM task_assignment_pool_members tapm
+             JOIN family_members fm ON fm.id = tapm.family_member_id
+             WHERE tapm.pool_id = :pool_id
+             ORDER BY fm.display_name ASC'
+        );
+        $membersStmt->execute(['pool_id' => $pool['id']]);
+
+        Response::json([
+            'id' => (int) $pool['id'],
+            'rhythm' => $pool['rhythm'],
+            'mode' => $pool['mode'],
+            'active' => (bool) $pool['active'],
+            'next_draw_at' => $pool['next_draw_at'],
+            'members' => array_map(static fn (array $r): array => [
+                'family_member_id' => (int) $r['family_member_id'],
+                'max_tasks' => $r['max_tasks'] !== null ? (int) $r['max_tasks'] : null,
+                'display_name' => $r['display_name'],
+            ], $membersStmt->fetchAll()),
+        ]);
+    }
+
+    /**
+     * PUT /api/task-lists/{id}/assignment-pool
+     * Body: { members: [{family_member_id, max_tasks?}], rhythm, mode?, active? }
+     *
+     * Legt die Zufalls-Zuteilung an oder ersetzt sie komplett (genau ein
+     * Pool pro Liste, siehe uniq_list_pool). Jede Änderung setzt
+     * next_draw_at auf heute - die nächste Cron-Ausführung
+     * (bin/draw-task-assignments.php) zieht dadurch sofort neu, statt auf
+     * den ursprünglich eingerichteten Zeitpunkt zu warten. Einfacher und
+     * vorhersehbarer als ein Versuch, einen bestehenden Rhythmus beim
+     * Ändern "nahtlos" fortzusetzen.
+     */
+    public function putAssignmentPool(Request $request): void
+    {
+        $db = Database::connection();
+        $listId = (int) $request->params['id'];
+        $this->findOwnList($db, $listId);
+
+        $rhythm = (string) $request->input('rhythm', '');
+        if (!in_array($rhythm, ['daily', 'weekly', 'monthly'], true)) {
+            Response::error('rhythm muss daily, weekly oder monthly sein.', 422);
+        }
+
+        $mode = (string) $request->input('mode', 'fair');
+        if (!in_array($mode, ['random', 'fair'], true)) {
+            Response::error('mode muss random oder fair sein.', 422);
+        }
+
+        $activeInput = $request->input('active', true);
+        $active = $activeInput === null || $activeInput === '' ? true : (bool) $activeInput;
+
+        $members = $request->input('members', []);
+        if (!is_array($members) || empty($members)) {
+            Response::error('members darf nicht leer sein.', 422);
+        }
+
+        $sanitizedMembers = [];
+        foreach ($members as $m) {
+            $memberId = (int) (is_array($m) ? ($m['family_member_id'] ?? 0) : 0);
+            $this->assertOwnMember($db, $memberId);
+
+            $rawMax = is_array($m) ? ($m['max_tasks'] ?? null) : null;
+            $maxTasks = ($rawMax === null || $rawMax === '') ? null : (int) $rawMax;
+            if ($maxTasks !== null && $maxTasks < 1) {
+                Response::error('max_tasks muss mindestens 1 sein (leer lassen für unbegrenzt).', 422);
+            }
+
+            $sanitizedMembers[$memberId] = $maxTasks; // dedupliziert gleich mit
+        }
+
+        $existingPool = $this->findPool($db, $listId);
+
+        if ($existingPool) {
+            $poolId = (int) $existingPool['id'];
+            $db->prepare(
+                'UPDATE task_assignment_pools
+                 SET rhythm = :rhythm, mode = :mode, active = :active, next_draw_at = CURDATE()
+                 WHERE id = :id'
+            )->execute([
+                'rhythm' => $rhythm,
+                'mode' => $mode,
+                'active' => $active ? 1 : 0,
+                'id' => $poolId,
+            ]);
+            $db->prepare('DELETE FROM task_assignment_pool_members WHERE pool_id = :pool_id')
+                ->execute(['pool_id' => $poolId]);
+        } else {
+            $db->prepare(
+                'INSERT INTO task_assignment_pools (task_list_id, rhythm, mode, next_draw_at, active)
+                 VALUES (:task_list_id, :rhythm, :mode, CURDATE(), :active)'
+            )->execute([
+                'task_list_id' => $listId,
+                'rhythm' => $rhythm,
+                'mode' => $mode,
+                'active' => $active ? 1 : 0,
+            ]);
+            $poolId = (int) $db->lastInsertId();
+        }
+
+        $insertMember = $db->prepare(
+            'INSERT INTO task_assignment_pool_members (pool_id, family_member_id, max_tasks)
+             VALUES (:pool_id, :member_id, :max_tasks)'
+        );
+        foreach ($sanitizedMembers as $memberId => $maxTasks) {
+            $insertMember->execute(['pool_id' => $poolId, 'member_id' => $memberId, 'max_tasks' => $maxTasks]);
+        }
+
+        Response::json(['id' => $poolId, 'status' => 'saved']);
+    }
+
+    /**
+     * DELETE /api/task-lists/{id}/assignment-pool
+     * Entfernt die Automatik - bereits gezogene Zuweisungen auf den
+     * Aufgaben bleiben als letzter Stand erhalten.
+     */
+    public function deleteAssignmentPool(Request $request): void
+    {
+        $db = Database::connection();
+        $listId = (int) $request->params['id'];
+        $this->findOwnList($db, $listId);
+
+        $db->prepare('DELETE FROM task_assignment_pools WHERE task_list_id = :list_id')
+            ->execute(['list_id' => $listId]);
+
+        Response::json(['status' => 'deleted']);
+    }
+
+    private function findPool(\PDO $db, int $listId): array|false
+    {
+        $stmt = $db->prepare('SELECT * FROM task_assignment_pools WHERE task_list_id = :list_id');
+        $stmt->execute(['list_id' => $listId]);
+
+        return $stmt->fetch();
+    }
+
+    private function assertOwnMember(\PDO $db, int $memberId): void
+    {
+        $stmt = $db->prepare('SELECT id FROM family_members WHERE id = :id AND family_id = :family_id');
+        $stmt->execute(['id' => $memberId, 'family_id' => TenantContext::familyId()]);
+        if (!$stmt->fetch()) {
+            Response::error('Person im Zuteilungs-Pool gehört nicht zu dieser Familie.', 422);
+        }
+    }
+
     /** @return array{id:int,name:string} */
     private function findOwnList(\PDO $db, int $id): array
     {
@@ -359,13 +529,13 @@ final class TaskListController
      * immer zu genau einer Liste, deren family_id ist bereits die
      * maßgebliche Quelle.
      *
-     * @return array{id:int,title:string,assigned_member_id:?int,due_date:?string,is_done:int,done_at:?string,done_by:?int,reward_points:?int}
+     * @return array{id:int,title:string,assigned_member_id:?int,due_date:?string,is_done:int,done_at:?string,done_by:?int,reward_points:?int,auto_assign:int}
      */
     private function findOwnTask(\PDO $db, int $id): array
     {
         $stmt = $db->prepare(
             'SELECT t.id, t.title, t.assigned_member_id, t.due_date, t.is_done, t.done_at, t.done_by,' . "\n" .
-            '       t.reward_points' . "\n" .
+            '       t.reward_points, t.auto_assign' . "\n" .
             '  FROM tasks t' . "\n" .
             '  JOIN task_lists tl ON tl.id = t.task_list_id' . "\n" .
             ' WHERE t.id = :id AND tl.family_id = :family_id'
